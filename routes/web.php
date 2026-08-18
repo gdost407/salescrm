@@ -13,7 +13,7 @@ Route::view('dashboard', 'dashboard')
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Sales Routes
-    Volt::route('sales/kanban', 'sales.kanban')->name('sales-kanban');
+    Volt::route('sales/kanban', 'sales.kanban')->name('sale-kanban');
     Volt::route('sales/create-lead', 'sales.create-lead')->name('sales-create-lead');
     Volt::route('sales/all-list', 'sales.all-list')->name('sales-all-list');
     Volt::route('sales/lead-settings', 'sales.lead-settings')->name('sales-lead-settings');

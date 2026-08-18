@@ -75,8 +75,8 @@
       </a>
     </li>
 
-    <li class="menu-item {{ request()->routeIs('sales-kanban') ? 'active' : '' }}">
-      <a href="{{ route('sales-kanban') }}" class="menu-link">
+    <li class="menu-item {{ request()->routeIs('sale-kanban') ? 'active' : '' }}">
+      <a href="{{ route('sale-kanban') }}" class="menu-link">
         <i class="menu-icon tf-icons bx bx-home-circle"></i>
         <div data-i18n="Analytics">Kanban</div>
       </a>

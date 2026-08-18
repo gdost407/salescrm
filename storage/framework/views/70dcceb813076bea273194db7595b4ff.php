@@ -68,39 +68,39 @@
 
   <ul class="menu-inner py-1">
     <!-- Dashboard -->
-    <li class="menu-item active">
+    <li class="menu-item <?php echo e(request()->routeIs('dashboard') ? 'active' : ''); ?>">
       <a href="<?php echo e(route('dashboard')); ?>" class="menu-link">
         <i class="menu-icon tf-icons bx bx-home-circle"></i>
         <div data-i18n="Analytics">Dashboard</div>
       </a>
     </li>
 
-    <li class="menu-item">
-      <a href="<?php echo e(route('sales-kanban')); ?>" class="menu-link">
+    <li class="menu-item <?php echo e(request()->routeIs('sale-kanban') ? 'active' : ''); ?>">
+      <a href="<?php echo e(route('sale-kanban')); ?>" class="menu-link">
         <i class="menu-icon tf-icons bx bx-home-circle"></i>
         <div data-i18n="Analytics">Kanban</div>
       </a>
     </li>
 
     <!-- sales -->
-    <li class="menu-item">
+    <li class="menu-item <?php echo e(request()->routeIs('sales-*') ? 'active open' : ''); ?>">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-layout"></i>
         <div data-i18n="sales">Sales</div>
       </a>
 
       <ul class="menu-sub">
-        <li class="menu-item">
+        <li class="menu-item <?php echo e(request()->routeIs('sales-create-lead') ? 'active' : ''); ?>">
           <a href="<?php echo e(route('sales-create-lead')); ?>" class="menu-link">
             <div data-i18n="Without menu">Create Lead</div>
           </a>
         </li>
-        <li class="menu-item">
+        <li class="menu-item <?php echo e(request()->routeIs('sales-all-list') ? 'active' : ''); ?>">
           <a href="<?php echo e(route('sales-all-list')); ?>" class="menu-link">
             <div data-i18n="Without navbar">All List</div>
           </a>
         </li>
-        <li class="menu-item">
+        <li class="menu-item <?php echo e(request()->routeIs('sales-lead-settings') ? 'active' : ''); ?>">
           <a href="<?php echo e(route('sales-lead-settings')); ?>" class="menu-link">
             <div data-i18n="Container">Lead Settings</div>
           </a>
@@ -111,23 +111,23 @@
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
     </li> -->
-    <li class="menu-item">
+    <li class="menu-item <?php echo e(request()->routeIs('staff-*') ? 'active open' : ''); ?>">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>
         <div data-i18n="Account Settings">Staff</div>
       </a>
       <ul class="menu-sub">
-        <li class="menu-item">
+        <li class="menu-item <?php echo e(request()->routeIs('staff-create') ? 'active' : ''); ?>">
           <a href="<?php echo e(route('staff-create')); ?>" class="menu-link">
             <div data-i18n="Account">Create Staff</div>
           </a>
         </li>
-        <li class="menu-item">
+        <li class="menu-item <?php echo e(request()->routeIs('staff-manage') ? 'active' : ''); ?>">
           <a href="<?php echo e(route('staff-manage')); ?>" class="menu-link">
             <div data-i18n="Notifications">Manage Staff</div>
           </a>
         </li>
-        <li class="menu-item">
+        <li class="menu-item <?php echo e(request()->routeIs('staff-roles') ? 'active' : ''); ?>">
           <a href="<?php echo e(route('staff-roles')); ?>" class="menu-link">
             <div data-i18n="Connections">Roles</div>
           </a>
