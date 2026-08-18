@@ -69,75 +69,72 @@
   <ul class="menu-inner py-1">
     <!-- Dashboard -->
     <li class="menu-item active">
-      <a href="index.html" class="menu-link">
+      <a href="{{ route('dashboard') }}" class="menu-link">
         <i class="menu-icon tf-icons bx bx-home-circle"></i>
         <div data-i18n="Analytics">Dashboard</div>
       </a>
     </li>
 
-    <!-- Layouts -->
+    <li class="menu-item">
+      <a href="{{ route('sales-kanban') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-home-circle"></i>
+        <div data-i18n="Analytics">Kanban</div>
+      </a>
+    </li>
+
+    <!-- sales -->
     <li class="menu-item">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-layout"></i>
-        <div data-i18n="Layouts">Layouts</div>
+        <div data-i18n="sales">Sales</div>
       </a>
 
       <ul class="menu-sub">
         <li class="menu-item">
-          <a href="layouts-without-menu.html" class="menu-link">
-            <div data-i18n="Without menu">Without menu</div>
+          <a href="{{ route('sales-create-lead') }}" class="menu-link">
+            <div data-i18n="Without menu">Create Lead</div>
           </a>
         </li>
         <li class="menu-item">
-          <a href="layouts-without-navbar.html" class="menu-link">
-            <div data-i18n="Without navbar">Without navbar</div>
+          <a href="{{ route('sales-all-list') }}" class="menu-link">
+            <div data-i18n="Without navbar">All List</div>
           </a>
         </li>
         <li class="menu-item">
-          <a href="layouts-container.html" class="menu-link">
-            <div data-i18n="Container">Container</div>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="layouts-fluid.html" class="menu-link">
-            <div data-i18n="Fluid">Fluid</div>
-          </a>
-        </li>
-        <li class="menu-item">
-          <a href="layouts-blank.html" class="menu-link">
-            <div data-i18n="Blank">Blank</div>
+          <a href="{{ route('sales-lead-settings') }}" class="menu-link">
+            <div data-i18n="Container">Lead Settings</div>
           </a>
         </li>
       </ul>
     </li>
 
-    <li class="menu-header small text-uppercase">
+    <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
-    </li>
+    </li> -->
     <li class="menu-item">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>
-        <div data-i18n="Account Settings">Account Settings</div>
+        <div data-i18n="Account Settings">Staff</div>
       </a>
       <ul class="menu-sub">
         <li class="menu-item">
-          <a href="pages-account-settings-account.html" class="menu-link">
-            <div data-i18n="Account">Account</div>
+          <a href="{{ route('staff-create') }}" class="menu-link">
+            <div data-i18n="Account">Create Staff</div>
           </a>
         </li>
         <li class="menu-item">
-          <a href="pages-account-settings-notifications.html" class="menu-link">
-            <div data-i18n="Notifications">Notifications</div>
+          <a href="{{ route('staff-manage') }}" class="menu-link">
+            <div data-i18n="Notifications">Manage Staff</div>
           </a>
         </li>
         <li class="menu-item">
-          <a href="pages-account-settings-connections.html" class="menu-link">
-            <div data-i18n="Connections">Connections</div>
+          <a href="{{ route('staff-roles') }}" class="menu-link">
+            <div data-i18n="Connections">Roles</div>
           </a>
         </li>
       </ul>
     </li>
-    <li class="menu-item">
+    <!-- <li class="menu-item">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-lock-open-alt"></i>
         <div data-i18n="Authentications">Authentications</div>
@@ -178,16 +175,15 @@
         </li>
       </ul>
     </li>
-    <!-- Components -->
+    
     <li class="menu-header small text-uppercase"><span class="menu-header-text">Components</span></li>
-    <!-- Cards -->
     <li class="menu-item">
       <a href="cards-basic.html" class="menu-link">
         <i class="menu-icon tf-icons bx bx-collection"></i>
         <div data-i18n="Basic">Cards</div>
       </a>
     </li>
-    <!-- User interface -->
+    
     <li class="menu-item">
       <a href="javascript:void(0)" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-box"></i>
@@ -292,7 +288,6 @@
       </ul>
     </li>
 
-    <!-- Extended components -->
     <li class="menu-item">
       <a href="javascript:void(0)" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-copy"></i>
@@ -319,9 +314,7 @@
       </a>
     </li>
 
-    <!-- Forms & Tables -->
     <li class="menu-header small text-uppercase"><span class="menu-header-text">Forms &amp; Tables</span></li>
-    <!-- Forms -->
     <li class="menu-item">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>
@@ -343,30 +336,30 @@
     <li class="menu-item">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-detail"></i>
-        <div data-i18n="Form Layouts">Form Layouts</div>
+        <div data-i18n="Form sales">Form sales</div>
       </a>
       <ul class="menu-sub">
         <li class="menu-item">
-          <a href="form-layouts-vertical.html" class="menu-link">
+          <a href="form-sales-vertical.html" class="menu-link">
             <div data-i18n="Vertical Form">Vertical Form</div>
           </a>
         </li>
         <li class="menu-item">
-          <a href="form-layouts-horizontal.html" class="menu-link">
+          <a href="form-sales-horizontal.html" class="menu-link">
             <div data-i18n="Horizontal Form">Horizontal Form</div>
           </a>
         </li>
       </ul>
     </li>
-    <!-- Tables -->
+    
     <li class="menu-item">
       <a href="tables-basic.html" class="menu-link">
         <i class="menu-icon tf-icons bx bx-table"></i>
         <div data-i18n="Tables">Tables</div>
       </a>
     </li>
-    <!-- Misc -->
-    <li class="menu-header small text-uppercase"><span class="menu-header-text">Misc</span></li>
+    
+    <li class="menu-header small text-uppercase"><span class="menu-header-text">Misc</span></li> -->
     <li class="menu-item">
       <a
         href="https://github.com/themeselection/sneat-html-admin-template-free/issues"
