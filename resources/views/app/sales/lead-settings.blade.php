@@ -28,7 +28,7 @@
                         @foreach ($leadStatuses as $status)
                             <div class="list-group-item d-flex justify-content-between align-items-center">
                                 <div class="d-flex align-items-center">
-                                    <span class="badge me-2" style="background-color: {{ $status['color'] }}; width: 20px; height: 20px; border-radius: 3px;"></span>
+                                    <span class="badge me-2" style="width: 20px; height: 20px; border-radius: 3px;"></span>
                                     <span>{{ $status['name'] }}</span>
                                 </div>
                                 <button class="btn btn-sm btn-danger">

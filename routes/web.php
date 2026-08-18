@@ -15,7 +15,7 @@ Route::view('dashboard', 'dashboard')
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Sales Routes
-    Route::get('sales/kanban', [SalesController::class, 'kanban'])->name('sales-kanban');
+    Route::get('sales/kanban', [SalesController::class, 'kanban'])->name('sale-kanban');
     Route::get('sales/create-lead', [SalesController::class, 'createLead'])->name('sales-create-lead');
     Route::post('sales/create-lead', [SalesController::class, 'storeLead']);
     Route::get('sales/all-list', [SalesController::class, 'allList'])->name('sales-all-list');
