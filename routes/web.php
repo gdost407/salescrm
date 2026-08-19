@@ -20,6 +20,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('sales/create-lead', [SalesController::class, 'storeLead']);
     Route::get('sales/all-list', [SalesController::class, 'allList'])->name('sales-all-list');
     Route::get('sales/lead-settings', [SalesController::class, 'leadSettings'])->name('sales-lead-settings');
+    Route::get('sales/lead-view', [SalesController::class, 'leadView'])->name('sales-lead-view');
 
     // Staff Routes
     Route::get('staff/create', [StaffController::class, 'create'])->name('staff-create');

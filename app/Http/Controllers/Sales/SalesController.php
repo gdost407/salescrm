@@ -74,4 +74,29 @@ class SalesController extends Controller
 
         return view('app.sales.lead-settings', compact('leadStatuses', 'leadSources'));
     }
+
+    /**
+     * Show lead view.
+     */
+    public function leadView()
+    {
+        $lead = [
+            'id' => 1,
+            'name' => 'John Smith',
+            'email' => 'john@example.com',
+            'company' => 'Tech Corp',
+            'value' => '$5,000',
+            'status' => 'Prospecting',
+            'notes' => [
+                ['id' => 1, 'note' => 'Initial contact', 'date' => '2023-08-01'],
+                ['id' => 2, 'note' => 'Follow-up call', 'date' => '2023-08-05'],
+            ],
+            'activities' => [
+                ['id' => 1, 'activity' => 'Email sent', 'date' => '2023-08-01'],
+                ['id' => 2, 'activity' => 'Call scheduled', 'date' => '2023-08-05'],
+            ],
+        ];
+
+        return view('app.sales.lead-view', compact('lead'));
+    }
 }

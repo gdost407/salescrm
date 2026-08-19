@@ -2,102 +2,161 @@
 
 @section('content')
 <div class="container-xxl flex-grow-1 container-p-y">
-    <div class="mb-4 d-flex justify-content-between align-items-center">
-        <div>
-            <h4 class="fw-bold py-3 mb-0">All Leads</h4>
-        </div>
-        <div>
-            <a href="{{ route('sales-create-lead') }}" class="btn btn-primary">
-                <i class="bx bx-plus"></i> Create New Lead
-            </a>
-        </div>
+  <div class="card">
+    <div class="card-header d-flex align-items-center justify-content-between">
+      <h5 class="mb-0">All Leads List</h5>
+      <small class="text-body-secondary d-flex float-end">
+        <div class="input-group input-group-merge">
+          <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-search"></i></span>
+          <input type="text" class="form-control" id="basic-icon-default-fullname" placeholder="Search" aria-label="Search" aria-describedby="basic-icon-default-fullname2">
+        </div> &nbsp;
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasEnd" aria-controls="offcanvasEnd"><i class="icon-base bx bx-filter-alt"></i></button> &nbsp;
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createLeadModal"><i class="icon-base bx bx-save"></i></button> &nbsp;
+        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createLeadModal"><i class="icon-base bx bx-import"></i></button>
+      </small>
     </div>
-
-    <div class="card mb-4">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-md-6">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="bx bx-search"></i></span>
-                        <input type="text" class="form-control" placeholder="Search leads...">
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="card-body">
+      <table class="table table-bordered responsive-leads-table">
+        <thead>
+          <tr>
+            <th scope="col">#</th>
+            <th scope="col">Full Name</th>
+            <th scope="col">Email</th>
+            <th scope="col">Mobile Number</th>
+            <th scope="col">Job Title</th>
+            <th scope="col">Order Value</th>
+            <th scope="col">Lead Stage</th>
+            <th scope="col">Lead Status</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <th scope="row" data-label="#">1</th>
+            <td data-label="Full Name">Mark</td>
+            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
+            <td data-label="Mobile Number">1234567890</td>
+            <td data-label="Job Title">Book for game</td>
+            <td data-label="Order Value">₹5200</td>
+            <td data-label="Lead Stage">Lead</td>
+            <td data-label="Lead Status">New</td>
+            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+          </tr>
+          <tr>
+            <th scope="row" data-label="#">1</th>
+            <td data-label="Full Name">Mark</td>
+            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
+            <td data-label="Mobile Number">1234567890</td>
+            <td data-label="Job Title">Book for game</td>
+            <td data-label="Order Value">₹5200</td>
+            <td data-label="Lead Stage">Lead</td>
+            <td data-label="Lead Status">New</td>
+            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+          </tr>
+          <tr>
+            <th scope="row" data-label="#">1</th>
+            <td data-label="Full Name">Mark</td>
+            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
+            <td data-label="Mobile Number">1234567890</td>
+            <td data-label="Job Title">Book for game</td>
+            <td data-label="Order Value">₹5200</td>
+            <td data-label="Lead Stage">Lead</td>
+            <td data-label="Lead Status">New</td>
+            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+          </tr>
+          <tr>
+            <th scope="row" data-label="#">1</th>
+            <td data-label="Full Name">Mark</td>
+            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
+            <td data-label="Mobile Number">1234567890</td>
+            <td data-label="Job Title">Book for game</td>
+            <td data-label="Order Value">₹5200</td>
+            <td data-label="Lead Stage">Lead</td>
+            <td data-label="Lead Status">New</td>
+            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+          </tr>
+        </tbody>
+      </table>
     </div>
-
-    <div class="card">
-        <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Name</th>
-                        <th>Email</th>
-                        <th>Company</th>
-                        <th>Deal Value</th>
-                        <th>Status</th>
-                        <th>Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse ($leads as $lead)
-                        <tr>
-                            <td>
-                                <strong>{{ $lead['name'] }}</strong>
-                            </td>
-                            <td>{{ $lead['email'] }}</td>
-                            <td>{{ $lead['company'] }}</td>
-                            <td>
-                                <strong>{{ $lead['value'] }}</strong>
-                            </td>
-                            <td>
-                                @switch($lead['status'])
-                                    @case('Prospecting')
-                                        <span class="badge bg-warning">{{ $lead['status'] }}</span>
-                                        @break
-                                    @case('Qualified')
-                                        <span class="badge bg-info">{{ $lead['status'] }}</span>
-                                        @break
-                                    @case('Negotiation')
-                                        <span class="badge bg-primary">{{ $lead['status'] }}</span>
-                                        @break
-                                    @case('Closed')
-                                        <span class="badge bg-success">{{ $lead['status'] }}</span>
-                                        @break
-                                    @default
-                                        <span class="badge bg-secondary">{{ $lead['status'] }}</span>
-                                @endswitch
-                            </td>
-                            <td>
-                                <div class="dropdown">
-                                    <button class="btn btn-sm btn-icon btn-text-secondary" type="button" data-bs-toggle="dropdown">
-                                        <i class="bx bx-dots-vertical-rounded"></i>
-                                    </button>
-                                    <div class="dropdown-menu">
-                                        <a class="dropdown-item" href="#">
-                                            <i class="bx bx-edit-alt"></i> Edit
-                                        </a>
-                                        <a class="dropdown-item" href="#">
-                                            <i class="bx bx-show"></i> View
-                                        </a>
-                                        <div class="dropdown-divider"></div>
-                                        <a class="dropdown-item text-danger" href="#">
-                                            <i class="bx bx-trash"></i> Delete
-                                        </a>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
-                    @empty
-                        <tr>
-                            <td colspan="6" class="text-center py-4 text-muted">
-                                No leads found. <a href="{{ route('sales-create-lead') }}">Create one now</a>
-                            </td>
-                        </tr>
-                    @endforelse
-                </tbody>
-            </table>
-        </div>
-    </div>
+  </div>
 </div>
+<div class="offcanvas offcanvas-end" tabindex="-1" id="offcanvasEnd" aria-labelledby="offcanvasEndLabel">
+  <div class="offcanvas-header">
+    <h5 id="offcanvasEndLabel" class="offcanvas-title">Filter</h5>
+    <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close" ></button>
+  </div>
+  <div class="offcanvas-body mx-0 flex-grow-0">
+    <form action="" method="post">
+      <div class="mb-6">
+        <label class="form-label" for="basic-icon-default-fullname">Date Range</label>
+        <div class="input-group input-group-merge">
+          <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-user"></i></span>
+          <select class="form-select" id="exampleFormControlSelect1" aria-label="Default select example">
+            <option value="today" selected>Today</option>
+            <option value="week">This Week</option>
+            <option value="month">This Month</option>
+            <option value="year">This Year</option>
+            <option value="custom">Custom</option>
+          </select>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="form-label" for="basic-icon-default-fullname">Lead Stage</label>
+        <div class="input-group input-group-merge">
+          <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-user"></i></span>
+          <select class="form-select" id="exampleFormControlSelect1" aria-label="Default select example">
+            @php
+            $stage = ['Lead', 'Other'];
+            foreach ($stage as $s) {
+                $selected = old('stage') == $s ? 'selected' : '';
+                echo "<option value=\"$s\" $selected>$s</option>";
+            }
+            @endphp
+          </select>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="form-label" for="basic-icon-default-fullname">Lead Status</label>
+        <div class="input-group input-group-merge">
+          <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-user"></i></span>
+          <select class="form-select" id="exampleFormControlSelect1" aria-label="Default select example">
+            @php
+            $status = ['New', 'Open', 'In Progress', 'Archived', 'Rejected', 'Won', 'Lost'];
+            foreach ($status as $s) {
+                $selected = old('status') == $s ? 'selected' : '';
+                echo "<option value=\"$s\" $selected>$s</option>";
+            }
+            @endphp
+          </select>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="form-label" for="basic-icon-default-fullname">Lead Source</label>
+        <div class="input-group input-group-merge">
+          <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-user"></i></span>
+          <select class="form-select" id="exampleFormControlSelect1" aria-label="Default select example">
+            @php
+            $source = ['Self', 'Website', 'Referral', 'Google Ads', 'Facebook', 'Instagram', 'Linkedin', 'Twitter', 'Other'];
+            foreach ($source as $s) {
+                $selected = old('source') == $s ? 'selected' : '';
+                echo "<option value=\"$s\" $selected>$s</option>";
+            }
+            @endphp
+          </select>
+        </div>
+      </div>
+      <div class="mb-6">
+        <label class="form-label" for="basic-icon-default-fullname">Contact Person</label>
+        <div class="input-group input-group-merge">
+          <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-user"></i></span>
+          <select class="form-select" id="exampleFormControlSelect1" aria-label="Default select example">
+            <option value="Self" selected>Self</option>
+          </select>
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Filter</button>
+    </form>
+  </div>
+</div>
+
 @endsection
