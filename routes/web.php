@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\Sales\SalesController;
-use App\Http\Controllers\Staff\StaffController;
+use App\Http\Controllers\Web\Sales\SalesController;
+use App\Http\Controllers\Web\Staff\StaffController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
