@@ -127,7 +127,7 @@
             <div data-i18n="Notifications">Manage Staff</div>
           </a>
         </li>
-        <li class="menu-item <?php echo e(request()->routeIs('staff-roles') ? 'active' : ''); ?>">
+        <li class="d-none menu-item <?php echo e(request()->routeIs('staff-roles') ? 'active' : ''); ?>">
           <a href="<?php echo e(route('staff-roles')); ?>" class="menu-link">
             <div data-i18n="Connections">Roles</div>
           </a>

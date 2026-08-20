@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\Web\Sales\SalesController;
+use App\Http\Controllers\Web\Staff\StaffController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -13,15 +15,18 @@ Route::view('dashboard', 'dashboard')
 
 Route::middleware(['auth', 'verified'])->group(function () {
     // Sales Routes
-    Volt::route('sales/kanban', 'sales.kanban')->name('sale-kanban');
-    Volt::route('sales/create-lead', 'sales.create-lead')->name('sales-create-lead');
-    Volt::route('sales/all-list', 'sales.all-list')->name('sales-all-list');
-    Volt::route('sales/lead-settings', 'sales.lead-settings')->name('sales-lead-settings');
+    Route::get('sales/kanban', [SalesController::class, 'kanban'])->name('sale-kanban');
+    Route::get('sales/create-lead', [SalesController::class, 'createLead'])->name('sales-create-lead');
+    Route::post('sales/create-lead', [SalesController::class, 'storeLead']);
+    Route::get('sales/all-list', [SalesController::class, 'allList'])->name('sales-all-list');
+    Route::get('sales/lead-settings', [SalesController::class, 'leadSettings'])->name('sales-lead-settings');
+    Route::get('sales/lead-view', [SalesController::class, 'leadView'])->name('sales-lead-view');
 
     // Staff Routes
-    Volt::route('staff/create', 'staff.create')->name('staff-create');
-    Volt::route('staff/manage', 'staff.manage')->name('staff-manage');
-    Volt::route('staff/roles', 'staff.roles')->name('staff-roles');
+    Route::get('staff/create', [StaffController::class, 'create'])->name('staff-create');
+    Route::post('staff/create', [StaffController::class, 'store']);
+    Route::get('staff/manage', [StaffController::class, 'manage'])->name('staff-manage');
+    Route::get('staff/roles', [StaffController::class, 'roles'])->name('staff-roles');
 
     // Settings Routes
     Route::redirect('settings', 'settings/profile');
