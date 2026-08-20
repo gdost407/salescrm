@@ -3,14 +3,17 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Str;
 
 class User extends Authenticatable // implements MustVerifyEmail
 {
-    /** @use HasFactory<\Database\Factories\UserFactory> */
+    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
     /**
@@ -19,8 +22,24 @@ class User extends Authenticatable // implements MustVerifyEmail
      * @var list<string>
      */
     protected $fillable = [
+        'company_id',
+        'user_type',
+        'role_id',
         'name',
         'email',
+        'mobile',
+        'joining_date',
+        'department_id',
+        'job_role',
+        'address',
+        'country',
+        'state',
+        'city',
+        'zip_code',
+        'working_time',
+        'salary_type',
+        'salary',
+        'is_active',
         'password',
     ];
 
@@ -44,7 +63,50 @@ class User extends Authenticatable // implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'joining_date' => 'date',
+            'salary' => 'decimal:2',
+            'is_active' => 'boolean',
         ];
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
+
+    public function role(): BelongsTo
+    {
+        return $this->belongsTo(Role::class);
+    }
+
+    public function createdLeads(): HasMany
+    {
+        return $this->hasMany(Lead::class, 'created_by');
+    }
+
+    public function assignedLeads(): HasMany
+    {
+        return $this->hasMany(Lead::class, 'assigned_to');
+    }
+
+    public function clients(): HasMany
+    {
+        return $this->hasMany(Client::class, 'created_by');
+    }
+
+    public function leadActivities(): HasMany
+    {
+        return $this->hasMany(LeadActivity::class);
+    }
+
+    public function uploadedAttachments(): HasMany
+    {
+        return $this->hasMany(LeadAttachment::class, 'uploaded_by');
+    }
+
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(Notification::class);
     }
 
     /**
