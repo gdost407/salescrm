@@ -3,7 +3,12 @@
 namespace App\Http\Controllers\Web\Sales;
 
 use App\Http\Controllers\Controller;
+use App\Models\Company;
+use App\Models\LeadSetting;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class SalesController extends Controller
 {
@@ -56,23 +61,96 @@ class SalesController extends Controller
     /**
      * Show lead settings.
      */
-    public function leadSettings()
+    public function leadSettings(Request $request)
     {
-        $leadStatuses = [
-            ['id' => 1, 'name' => 'Prospecting', 'color' => '#FF9800'],
-            ['id' => 2, 'name' => 'Qualified', 'color' => '#2196F3'],
-            ['id' => 3, 'name' => 'Negotiation', 'color' => '#1976D2'],
-            ['id' => 4, 'name' => 'Closed', 'color' => '#4CAF50'],
-        ];
+        $companyId = $request->user()->company_id;
+        $leadSettings = LeadSetting::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($companyId) {
+                $query->whereNull('company_id')->orWhere('company_id', $companyId);
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('setting_type');
 
-        $leadSources = [
-            ['id' => 1, 'name' => 'Website'],
-            ['id' => 2, 'name' => 'Email'],
-            ['id' => 3, 'name' => 'Phone'],
-            ['id' => 4, 'name' => 'Referral'],
-        ];
+        return view('app.sales.lead-settings', compact('leadSettings'));
+    }
 
-        return view('app.sales.lead-settings', compact('leadStatuses', 'leadSources'));
+    public function storeLeadSetting(Request $request): RedirectResponse
+    {
+        if (! $request->user()->company_id) {
+            $company = Company::create([
+                'name' => $request->user()->name.' Company',
+                'slug' => Str::slug($request->user()->name).'-'.Str::lower(Str::random(6)),
+                'email' => $request->user()->email,
+            ]);
+
+            $request->user()->update(['company_id' => $company->id]);
+        }
+
+        $companyId = $request->user()->company_id;
+
+        $validated = $request->validate([
+            'setting_type' => ['required', Rule::in(['stage', 'status', 'source'])],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('lead_settings', 'name')->where(function ($query) use ($companyId, $request) {
+                    $query->where('setting_type', $request->string('setting_type'))
+                        ->where(function ($query) use ($companyId) {
+                            $query->where('company_id', $companyId)->orWhereNull('company_id');
+                        });
+                }),
+            ],
+        ]);
+
+        LeadSetting::create([
+            'company_id' => $companyId,
+            'setting_type' => $validated['setting_type'],
+            'name' => trim($validated['name']),
+            'type' => 'manual',
+            'sort_order' => 0,
+        ]);
+
+        return to_route('sales-lead-settings')->with('success', 'Lead setting added successfully.');
+    }
+
+    public function updateLeadSetting(Request $request, LeadSetting $leadSetting): RedirectResponse
+    {
+        abort_unless((int) $leadSetting->company_id === (int) $request->user()->company_id && $leadSetting->type === 'manual', 404);
+
+        $validated = $request->validate([
+            'setting_type' => ['required', Rule::in(['stage', 'status', 'source'])],
+            'name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('lead_settings', 'name')->ignore($leadSetting->id)->where(function ($query) use ($request, $leadSetting) {
+                    $query->where('setting_type', $request->string('setting_type'))
+                        ->where(function ($query) use ($leadSetting) {
+                            $query->where('company_id', $leadSetting->company_id)->orWhereNull('company_id');
+                        });
+                }),
+            ],
+        ]);
+
+        $leadSetting->update([
+            'setting_type' => $validated['setting_type'],
+            'name' => trim($validated['name']),
+        ]);
+
+        return to_route('sales-lead-settings')->with('success', 'Lead setting updated successfully.');
+    }
+
+    public function destroyLeadSetting(Request $request, LeadSetting $leadSetting): RedirectResponse
+    {
+        abort_unless((int) $leadSetting->company_id === (int) $request->user()->company_id && $leadSetting->type === 'manual', 404);
+
+        $leadSetting->delete();
+
+        return to_route('sales-lead-settings')->with('success', 'Lead setting deleted successfully.');
     }
 
     /**

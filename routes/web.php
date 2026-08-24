@@ -20,6 +20,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('sales/create-lead', [SalesController::class, 'storeLead']);
     Route::get('sales/all-list', [SalesController::class, 'allList'])->name('sales-all-list');
     Route::get('sales/lead-settings', [SalesController::class, 'leadSettings'])->name('sales-lead-settings');
+    Route::post('sales/lead-settings', [SalesController::class, 'storeLeadSetting'])->name('sales-lead-settings.store');
+    Route::put('sales/lead-settings/{leadSetting}', [SalesController::class, 'updateLeadSetting'])->name('sales-lead-settings.update');
+    Route::delete('sales/lead-settings/{leadSetting}', [SalesController::class, 'destroyLeadSetting'])->name('sales-lead-settings.destroy');
     Route::get('sales/lead-view', [SalesController::class, 'leadView'])->name('sales-lead-view');
 
     // Staff Routes

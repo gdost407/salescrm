@@ -1,9 +1,11 @@
 <?php
 
+use App\Models\Company;
 use App\Models\User;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -26,6 +28,13 @@ new #[Layout('components.layouts.auth')] class extends Component {
         ]);
 
         $validated['password'] = Hash::make($validated['password']);
+
+        $company = Company::create([
+            'name' => $validated['name'].' Company',
+            'slug' => Str::slug($validated['name']).'-'.Str::lower(Str::random(6)),
+            'email' => $validated['email'],
+        ]);
+        $validated['company_id'] = $company->id;
 
         event(new Registered(($user = User::create($validated))));
 
