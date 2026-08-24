@@ -11,7 +11,7 @@
           <input type="text" class="form-control" id="basic-icon-default-fullname" placeholder="Search" aria-label="Search" aria-describedby="basic-icon-default-fullname2">
         </div> &nbsp;
         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="offcanvas" data-bs-target="#offcanvasEnd" aria-controls="offcanvasEnd"><i class="icon-base bx bx-filter-alt"></i></button> &nbsp;
-        <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createLeadModal"><i class="icon-base bx bx-save"></i></button> &nbsp;
+        <a href="{{ route('sales-create-lead') }}" class="btn btn-sm btn-primary" title="Create lead"><i class="icon-base bx bx-save"></i></a> &nbsp;
         <button type="button" class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#createLeadModal"><i class="icon-base bx bx-import"></i></button>
       </small>
     </div>
@@ -31,50 +31,29 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Job Title">Book for game</td>
-            <td data-label="Order Value">₹5200</td>
-            <td data-label="Lead Stage">Lead</td>
-            <td data-label="Lead Status">New</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Job Title">Book for game</td>
-            <td data-label="Order Value">₹5200</td>
-            <td data-label="Lead Stage">Lead</td>
-            <td data-label="Lead Status">New</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Job Title">Book for game</td>
-            <td data-label="Order Value">₹5200</td>
-            <td data-label="Lead Stage">Lead</td>
-            <td data-label="Lead Status">New</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Job Title">Book for game</td>
-            <td data-label="Order Value">₹5200</td>
-            <td data-label="Lead Stage">Lead</td>
-            <td data-label="Lead Status">New</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
+          @forelse ($leads as $lead)
+            <tr>
+              <th scope="row" data-label="#">{{ $loop->iteration }}</th>
+              <td data-label="Full Name">{{ $lead->name }}</td>
+              <td data-label="Email" class="hide-in-mobile-card">{{ $lead->email ?: '-' }}</td>
+              <td data-label="Mobile Number">{{ $lead->mobile ?: '-' }}</td>
+              <td data-label="Job Title">{{ $lead->job_title ?: '-' }}</td>
+              <td data-label="Order Value">{{ $lead->deal_amount ?? '0.00' }}</td>
+              <td data-label="Lead Stage">{{ $lead->stage }}</td>
+              <td data-label="Lead Status">{{ $lead->status }}</td>
+              <td data-label="Actions">
+                <a href="{{ route('sales-lead-view', $lead) }}" class="btn btn-sm btn-primary" title="View lead"><i class="bx bx-show"></i></a>
+                <a href="{{ route('sales-leads.edit', $lead) }}" class="btn btn-sm btn-primary" title="Edit lead"><i class="bx bx-edit"></i></a>
+                <form action="{{ route('sales-leads.destroy', $lead) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this lead?');">
+                  @csrf
+                  @method('DELETE')
+                  <button type="submit" class="btn btn-sm btn-danger" title="Delete lead"><i class="bx bx-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+          @empty
+            <tr><td colspan="9" class="text-center">No leads found.</td></tr>
+          @endforelse
         </tbody>
       </table>
     </div>

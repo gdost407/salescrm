@@ -90,6 +90,7 @@
         window.addEventListener('beforeunload', start);
         document.addEventListener('livewire:navigating', start);
         document.addEventListener('livewire:navigated', finish);
+        document.addEventListener('page-loading-finished', finish);
         document.addEventListener('livewire:init', () => {
           Livewire.hook('request', ({ succeed, fail }) => {
             start();

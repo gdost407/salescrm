@@ -40,7 +40,7 @@
             <td data-label="Role">Manager</td>
             <td data-label="City">New York</td>
             <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
           </tr>
           <tr>
             <th scope="row" data-label="#">1</th>
@@ -51,7 +51,7 @@
             <td data-label="Role">Manager</td>
             <td data-label="City">New York</td>
             <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
           </tr>
           <tr>
             <th scope="row" data-label="#">1</th>
@@ -62,7 +62,7 @@
             <td data-label="Role">Manager</td>
             <td data-label="City">New York</td>
             <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
           </tr>
           <tr>
             <th scope="row" data-label="#">1</th>
@@ -73,7 +73,7 @@
             <td data-label="Role">Manager</td>
             <td data-label="City">New York</td>
             <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-lead-view') }}" class="btn btn-sm btn-primary">View</a></td>
+            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
           </tr>
         </tbody>
       </table>

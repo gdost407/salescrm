@@ -3,8 +3,18 @@
 namespace App\Http\Controllers\Web\Sales;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\CompleteLeadActivityRequest;
+use App\Http\Requests\StoreLeadActivityRequest;
+use App\Http\Requests\StoreLeadRequest;
+use App\Http\Requests\UpdateLeadRequest;
 use App\Models\Company;
+use App\Models\Lead;
+use App\Models\LeadActivity;
+use App\Models\LeadAttachment;
 use App\Models\LeadSetting;
+use App\Models\User;
+use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -29,33 +39,220 @@ class SalesController extends Controller
     /**
      * Show create lead form.
      */
-    public function createLead()
+    public function createLead(Request $request)
     {
-        return view('app.sales.create-lead');
+        return view('app.sales.create-lead', $this->leadFormData($request));
     }
 
     /**
      * Store a new lead.
      */
-    public function storeLead()
+    public function storeLead(StoreLeadRequest $request): RedirectResponse
     {
-        // TODO: Implement lead storage logic
-        return redirect()->route('sales-all-list')->with('message', 'Lead created successfully!');
+        $companyId = $this->ensureCompany($request);
+        $validated = $this->validatedLeadData($request->validated(), $companyId);
+        $lead = Lead::create($validated + ['company_id' => $companyId, 'created_by' => $request->user()->id]);
+        $this->recordLeadEvent($lead, $request->user()->id, 'Lead created', 'Lead was created.');
+
+        return to_route('sales-all-list')->with('message', 'Lead created successfully!');
+    }
+
+    public function editLead(Request $request, Lead $lead)
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+
+        return view('app.sales.create-lead', $this->leadFormData($request, $lead));
+    }
+
+    public function updateLead(UpdateLeadRequest $request, Lead $lead): RedirectResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $oldStatus = $lead->status;
+        $lead->update($this->validatedLeadData($request->validated(), (int) $request->user()->company_id));
+
+        if ($oldStatus !== $lead->status) {
+            $this->recordLeadEvent($lead, $request->user()->id, 'Status changed', $oldStatus.' -> '.$lead->status);
+        }
+
+        return to_route('sales-all-list')->with('message', 'Lead updated successfully!');
+    }
+
+    public function destroyLead(Request $request, Lead $lead): RedirectResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $lead->delete();
+
+        return to_route('sales-all-list')->with('message', 'Lead deleted successfully!');
+    }
+
+    public function storeLeadActivity(StoreLeadActivityRequest $request, Lead $lead): RedirectResponse|JsonResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $activity = $lead->activities()->create($this->activityData($request->validated(), $request->user()->id, $lead));
+        $lead->update(['last_activity_at' => now()]);
+
+        if ($request->hasFile('attachment')) {
+            $file = $request->file('attachment');
+            $path = $file->store('lead-attachments', 'public');
+            LeadAttachment::create([
+                'company_id' => $lead->company_id,
+                'lead_id' => $lead->id,
+                'uploaded_by' => $request->user()->id,
+                'original_name' => $file->getClientOriginalName(),
+                'file_name' => basename($path),
+                'file_path' => $path,
+                'disk' => 'public',
+                'mime_type' => $file->getMimeType(),
+                'file_size' => $file->getSize(),
+                'file_extension' => $file->getClientOriginalExtension(),
+                'description' => $activity->subject,
+            ]);
+        }
+
+        if ($request->boolean('mark_as_lead_address')) {
+            $lead->update([
+                'address' => $validated['visit_address'],
+                'country' => $validated['visit_country'],
+                'state' => $validated['visit_state'],
+                'city' => $validated['visit_city'],
+                'pincode' => $validated['visit_zip'],
+            ]);
+        }
+
+        return $this->activityResponse($request, $lead, 'Activity added successfully!');
+    }
+
+    public function updateLeadActivity(StoreLeadActivityRequest $request, Lead $lead, LeadActivity $activity): RedirectResponse|JsonResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $this->ensureActivityBelongsToLead($activity, $lead);
+        $isLatestNoteOrCall = in_array($activity->activity_type, ['notes', 'call'], true)
+            && $activity->id === $lead->activities()->where('activity_type', $activity->activity_type)->latest()->value('id');
+        abort_if($activity->status === 'completed' && ! $isLatestNoteOrCall, 403);
+        abort_if(in_array($activity->activity_type, ['notes', 'call'], true) && ! $isLatestNoteOrCall, 403);
+        abort_if(($activity->metadata['activity_status'] ?? null) === 'rescheduled', 403);
+        $newData = $this->activityData($request->validated(), $request->user()->id, $lead);
+        $oldSchedule = $activity->scheduled_at?->format('Y-m-d H:i');
+        $newSchedule = $newData['scheduled_at'] ? Carbon::parse($newData['scheduled_at'])->format('Y-m-d H:i') : null;
+        if (in_array($activity->activity_type, ['followup', 'visit', 'gmeet'], true) && $oldSchedule !== $newSchedule) {
+            $activity->update(['metadata' => array_merge($activity->metadata ?? [], ['activity_status' => 'rescheduled'])]);
+            $lead->activities()->create($newData);
+        } else {
+            $activity->update($newData);
+        }
+        $lead->update(['last_activity_at' => now()]);
+
+        return $this->activityResponse($request, $lead, 'Activity updated successfully!');
+    }
+
+    public function destroyLeadActivity(Request $request, Lead $lead, LeadActivity $activity): RedirectResponse|JsonResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $this->ensureActivityBelongsToLead($activity, $lead);
+        abort_if($activity->status === 'completed', 403);
+        abort_if(($activity->metadata['activity_status'] ?? null) === 'rescheduled', 403);
+        abort_if(in_array($activity->activity_type, ['notes', 'call'], true), 403);
+        $activity->delete();
+
+        return $this->activityResponse($request, $lead, 'Activity deleted successfully!');
+    }
+
+    public function completeLeadActivity(CompleteLeadActivityRequest $request, Lead $lead, LeadActivity $activity): RedirectResponse|JsonResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $this->ensureActivityBelongsToLead($activity, $lead);
+        abort_if($activity->status === 'completed', 403);
+        abort_unless(in_array($activity->activity_type, ['followup', 'visit', 'gmeet'], true), 403);
+        $activity->update([
+            'status' => 'completed',
+            'completed_at' => now(),
+            'summary' => trim(($activity->summary ? $activity->summary."\n\n" : '').$request->validated('final_note')),
+            'metadata' => array_merge($activity->metadata ?? [], ['activity_status' => 'completed']),
+        ]);
+        $lead->update(['last_activity_at' => now()]);
+
+        return $this->activityResponse($request, $lead, 'Activity marked as completed!');
     }
 
     /**
      * Show all leads list.
      */
-    public function allList()
+    public function allList(Request $request)
     {
-        $leads = [
-            ['id' => 1, 'name' => 'John Smith', 'email' => 'john@example.com', 'company' => 'Tech Corp', 'value' => '$5,000', 'status' => 'Prospecting'],
-            ['id' => 2, 'name' => 'Jane Doe', 'email' => 'jane@example.com', 'company' => 'Innovation Inc', 'value' => '$8,000', 'status' => 'Qualified'],
-            ['id' => 3, 'name' => 'Mike Johnson', 'email' => 'mike@example.com', 'company' => 'Digital Solutions', 'value' => '$12,000', 'status' => 'Negotiation'],
-            ['id' => 4, 'name' => 'Sarah Williams', 'email' => 'sarah@example.com', 'company' => 'Future Tech', 'value' => '$15,000', 'status' => 'Closed'],
-        ];
+        $leads = Lead::query()
+            ->where('company_id', $request->user()->company_id)
+            ->latest()
+            ->get();
 
         return view('app.sales.all-list', compact('leads'));
+    }
+
+    private function leadFormData(Request $request, ?Lead $lead = null): array
+    {
+        $companyId = $request->user()->company_id;
+        $settings = LeadSetting::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($companyId) {
+                $query->whereNull('company_id')->orWhere('company_id', $companyId);
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get()
+            ->groupBy('setting_type');
+        $users = User::query()
+            ->where('company_id', $companyId)
+            ->where('is_active', true)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return compact('lead', 'settings', 'users');
+    }
+
+    private function ensureCompany(Request $request): int
+    {
+        if (! $request->user()->company_id) {
+            $company = Company::create([
+                'name' => $request->user()->name.' Company',
+                'slug' => Str::slug($request->user()->name).'-'.Str::lower(Str::random(6)),
+                'email' => $request->user()->email,
+            ]);
+            $request->user()->update(['company_id' => $company->id]);
+        }
+
+        return (int) $request->user()->fresh()->company_id;
+    }
+
+    private function validatedLeadData(array $validated, int $companyId): array
+    {
+        $settings = LeadSetting::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($companyId) {
+                $query->whereNull('company_id')->orWhere('company_id', $companyId);
+            })
+            ->whereIn('setting_type', ['stage', 'status', 'source'])
+            ->get(['setting_type', 'name'])
+            ->groupBy('setting_type');
+
+        foreach (['stage', 'status', 'source'] as $field) {
+            validator([$field => $validated[$field]], [
+                $field => [Rule::in($settings->get($field, collect())->pluck('name')->all())],
+            ])->validate();
+        }
+
+        if (isset($validated['assigned_to'])) {
+            validator(['assigned_to' => $validated['assigned_to']], [
+                'assigned_to' => [Rule::exists((new User)->getTable(), 'id')->where(fn ($query) => $query
+                    ->where('company_id', $companyId)
+                    ->where('is_active', true))],
+            ])->validate();
+        }
+
+        return $validated;
+    }
+
+    private function ensureLeadBelongsToUserCompany(Request $request, Lead $lead): void
+    {
+        abort_unless((int) $lead->company_id === (int) $request->user()->company_id, 404);
     }
 
     /**
@@ -153,28 +350,88 @@ class SalesController extends Controller
         return to_route('sales-lead-settings')->with('success', 'Lead setting deleted successfully.');
     }
 
-    /**
-     * Show lead view.
-     */
-    public function leadView()
+    public function leadView(Request $request, Lead $lead)
     {
-        $lead = [
-            'id' => 1,
-            'name' => 'John Smith',
-            'email' => 'john@example.com',
-            'company' => 'Tech Corp',
-            'value' => '$5,000',
-            'status' => 'Prospecting',
-            'notes' => [
-                ['id' => 1, 'note' => 'Initial contact', 'date' => '2023-08-01'],
-                ['id' => 2, 'note' => 'Follow-up call', 'date' => '2023-08-05'],
-            ],
-            'activities' => [
-                ['id' => 1, 'activity' => 'Email sent', 'date' => '2023-08-01'],
-                ['id' => 2, 'activity' => 'Call scheduled', 'date' => '2023-08-05'],
-            ],
-        ];
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $data = $this->leadViewData($lead);
 
-        return view('app.sales.lead-view', compact('lead'));
+        return view('app.sales.lead-view', $data);
+    }
+
+    public function leadActivityFragments(Request $request, Lead $lead)
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+
+        return response()->json(['html' => view('app.sales.lead-tabs', $this->leadViewData($lead))->render()]);
+    }
+
+    private function activityResponse(Request $request, Lead $lead, string $message): RedirectResponse|JsonResponse
+    {
+        if ($request->expectsJson()) {
+            return response()->json(['message' => $message, 'html' => view('app.sales.lead-tabs', $this->leadViewData($lead))->render()]);
+        }
+
+        return to_route('sales-lead-view', $lead)->with('message', $message);
+    }
+
+    private function leadViewData(Lead $lead): array
+    {
+        $lead->load(['assignee', 'creator', 'activities.user', 'attachments', 'activities' => fn ($query) => $query->latest()]);
+        $activities = $lead->activities;
+        $activityEntries = $activities->groupBy('activity_type');
+        $timeline = $activities->sortByDesc('created_at')->values();
+
+        return compact('lead', 'activities', 'activityEntries', 'timeline');
+    }
+
+    private function recordLeadEvent(Lead $lead, int $userId, string $subject, string $summary): void
+    {
+        $lead->activities()->create([
+            'company_id' => $lead->company_id,
+            'user_id' => $userId,
+            'activity_type' => 'notes',
+            'subject' => $subject,
+            'summary' => $summary,
+            'status' => 'completed',
+        ]);
+        $lead->update(['last_activity_at' => now()]);
+    }
+
+    private function activityData(array $validated, int $userId, Lead $lead): array
+    {
+        $activityType = $validated['activity_type'];
+        $subject = match ($activityType) {
+            'notes' => 'Note added',
+            'call' => 'Call note added',
+            'followup' => 'Follow-up scheduled',
+            'visit' => 'Site visit scheduled',
+            'gmeet' => 'Meeting scheduled',
+            'email' => $validated['email_subject'],
+        };
+        $scheduledAt = $validated['followup_date'] ?? null;
+        $scheduledAt = $scheduledAt && isset($validated['followup_time']) ? $scheduledAt.' '.$validated['followup_time'] : $scheduledAt;
+        $scheduledAt ??= $validated['visit_scheduled_at'] ?? $validated['meeting_scheduled_at'] ?? null;
+        $summary = $validated['summary'] ?? $validated['email_body'] ?? $validated['visit_motive'] ?? $validated['meeting_motive'] ?? null;
+        $metadata = collect($validated)->only([
+            'visit_address', 'visit_country', 'visit_state', 'visit_city', 'visit_zip',
+            'mark_as_lead_address', 'meeting_link',
+        ])->filter(fn ($value) => $value !== null && $value !== '')->all();
+
+        return [
+            'company_id' => $lead->company_id,
+            'user_id' => $userId,
+            'activity_type' => $activityType,
+            'followup_type' => $activityType === 'followup' ? 'call' : null,
+            'subject' => $subject,
+            'summary' => $summary,
+            'scheduled_at' => $scheduledAt,
+            'status' => $scheduledAt ? 'pending' : 'completed',
+            'metadata' => $metadata ?: null,
+        ];
+    }
+
+    private function ensureActivityBelongsToLead(LeadActivity $activity, Lead $lead): void
+    {
+        abort_unless((int) $activity->lead_id === (int) $lead->id, 404);
     }
 }
