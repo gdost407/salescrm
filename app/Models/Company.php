@@ -13,11 +13,15 @@ class Company extends Model
     protected $fillable = [
         'name', 'slug', 'email', 'phone', 'website', 'address', 'city',
         'state', 'country', 'pincode', 'logo', 'staff_limit', 'status',
+        'onboarding_completed_at',
     ];
 
     protected function casts(): array
     {
-        return ['staff_limit' => 'integer'];
+        return [
+            'staff_limit' => 'integer',
+            'onboarding_completed_at' => 'datetime',
+        ];
     }
 
     public function users(): HasMany

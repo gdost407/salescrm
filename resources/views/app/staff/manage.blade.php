@@ -31,50 +31,21 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Department">Sales</td>
-            <td data-label="Role">Manager</td>
-            <td data-label="City">New York</td>
-            <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Department">Sales</td>
-            <td data-label="Role">Manager</td>
-            <td data-label="City">New York</td>
-            <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Department">Sales</td>
-            <td data-label="Role">Manager</td>
-            <td data-label="City">New York</td>
-            <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
-          <tr>
-            <th scope="row" data-label="#">1</th>
-            <td data-label="Full Name">Mark</td>
-            <td data-label="Email" class="hide-in-mobile-card">example@gmail.com</td>
-            <td data-label="Mobile Number">1234567890</td>
-            <td data-label="Department">Sales</td>
-            <td data-label="Role">Manager</td>
-            <td data-label="City">New York</td>
-            <td data-label="Zipcode">10001</td>
-            <td data-label="Actions"><a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-primary">View</a></td>
-          </tr>
+          @forelse ($staffMembers as $index => $staff)
+            <tr>
+              <th scope="row" data-label="#">{{ $index + 1 }}</th>
+              <td data-label="Full Name">{{ $staff->name }}</td>
+              <td data-label="Email" class="hide-in-mobile-card">{{ $staff->email }}</td>
+              <td data-label="Mobile Number">{{ $staff->mobile ?: '-' }}</td>
+              <td data-label="Department">{{ $staff->department ?: '-' }}</td>
+              <td data-label="Role">{{ $staff->job_role ?: '-' }}</td>
+              <td data-label="City">{{ $staff->city ?: '-' }}</td>
+              <td data-label="Zipcode">{{ $staff->zip_code ?: '-' }}</td>
+              <td data-label="Actions">{{ $staff->is_active ? 'Active' : 'Inactive' }}</td>
+            </tr>
+          @empty
+            <tr><td colspan="9" class="text-center">No staff members found.</td></tr>
+          @endforelse
         </tbody>
       </table>
     </div>

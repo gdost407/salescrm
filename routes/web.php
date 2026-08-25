@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
+use App\Http\Middleware\EnsureCompanyOnboardingComplete;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -10,10 +11,14 @@ Route::get('/', function () {
 })->name('home');
 
 Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])
     ->name('dashboard');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware('auth')->group(function () {
+    Volt::route('company/onboarding', 'company.onboarding')->name('company.onboarding');
+});
+
+Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])->group(function () {
     // Sales Routes
     Route::get('sales/kanban', [SalesController::class, 'kanban'])->name('sale-kanban');
     Route::get('sales/create-lead', [SalesController::class, 'createLead'])->name('sales-create-lead');
@@ -35,7 +40,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Staff Routes
     Route::get('staff/create', [StaffController::class, 'create'])->name('staff-create');
-    Route::post('staff/create', [StaffController::class, 'store']);
+    Route::post('staff/create', [StaffController::class, 'store'])->name('staff.store');
     Route::get('staff/manage', [StaffController::class, 'manage'])->name('staff-manage');
     Route::get('staff/roles', [StaffController::class, 'roles'])->name('staff-roles');
 

@@ -35,12 +35,13 @@ new #[Layout('components.layouts.auth')] class extends Component {
             'email' => $validated['email'],
         ]);
         $validated['company_id'] = $company->id;
+        $validated['user_type'] = 'owner';
 
         event(new Registered(($user = User::create($validated))));
 
         Auth::login($user);
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        $this->redirect(route('company.onboarding', absolute: false), navigate: true);
     }
 }; ?>
 

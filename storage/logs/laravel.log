@@ -2668,3 +2668,7 @@
 #56 P:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('P://xampp//htdocs...')
 #57 {main}
 "} 
+[2026-08-25 16:26:43] local.ERROR: Cannot declare class App\Http\Middleware\EnsureCompanyOnboardingComplete, because the name is already in use {"userId":1,"exception":"[object] (Symfony\\Component\\ErrorHandler\\Error\\FatalError(code: 0): Cannot declare class App\\Http\\Middleware\\EnsureCompanyOnboardingComplete, because the name is already in use at P:/xampp/htdocs/GDost/salescrm/app/Http/Middleware/EnsureCompanyOnboardingComplete.php:32)
+[stacktrace]
+#0 {main}
+"} 

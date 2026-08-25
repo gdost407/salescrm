@@ -3,14 +3,23 @@
 namespace App\Http\Controllers\Web\Staff;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreStaffRequest;
+use App\Mail\StaffCredentials;
+use App\Models\Company;
+use App\Models\User;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
+use Illuminate\View\View;
 
 class StaffController extends Controller
 {
     /**
      * Show create staff form.
      */
-    public function create()
+    public function create(): View
     {
         return view('app.staff.create');
     }
@@ -18,23 +27,49 @@ class StaffController extends Controller
     /**
      * Store a new staff member.
      */
-    public function store(Request $request)
+    public function store(StoreStaffRequest $request): RedirectResponse
     {
-        // TODO: Implement staff storage logic
+        $temporaryPassword = Str::random(16);
+
+        DB::transaction(function () use ($request, $temporaryPassword): void {
+            $company = Company::query()
+                ->whereKey($request->user()->company_id)
+                ->lockForUpdate()
+                ->firstOrFail();
+            $activeSubscription = $company->subscriptions()
+                ->where('status', 'active')
+                ->with('plan')
+                ->latest('starts_at')
+                ->first();
+            $staffLimit = $activeSubscription?->plan?->max_users ?? $company->staff_limit;
+
+            if ($company->users()->where('user_type', 'staff')->count() >= $staffLimit) {
+                abort(422, 'Your current plan does not allow any more staff members.');
+            }
+
+            $staff = User::create([
+                ...$request->validated(),
+                'company_id' => $company->id,
+                'user_type' => 'staff',
+                'password' => $temporaryPassword,
+            ]);
+
+            Mail::to($staff)->send(new StaffCredentials($staff, $temporaryPassword));
+        });
+
         return redirect()->route('staff-manage')->with('message', 'Staff member created successfully!');
     }
 
     /**
      * Show manage staff list.
      */
-    public function manage()
+    public function manage(Request $request): View
     {
-        $staffMembers = [
-            ['id' => 1, 'name' => 'John Doe', 'email' => 'john@example.com', 'department' => 'Sales', 'role' => 'Sales Executive', 'status' => 'Active'],
-            ['id' => 2, 'name' => 'Jane Smith', 'email' => 'jane@example.com', 'department' => 'Sales', 'role' => 'Sales Manager', 'status' => 'Active'],
-            ['id' => 3, 'name' => 'Mike Johnson', 'email' => 'mike@example.com', 'department' => 'Marketing', 'role' => 'Team Lead', 'status' => 'Active'],
-            ['id' => 4, 'name' => 'Sarah Williams', 'email' => 'sarah@example.com', 'department' => 'Operations', 'role' => 'Administrator', 'status' => 'Inactive'],
-        ];
+        $staffMembers = User::query()
+            ->where('company_id', $request->user()->company_id)
+            ->where('user_type', 'staff')
+            ->latest()
+            ->get();
 
         return view('app.staff.manage', compact('staffMembers'));
     }
@@ -85,4 +120,3 @@ class StaffController extends Controller
         return view('app.staff.roles', compact('roles', 'permissions'));
     }
 }
-
