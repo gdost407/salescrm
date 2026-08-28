@@ -7,6 +7,7 @@ use App\Http\Requests\CompleteLeadActivityRequest;
 use App\Http\Requests\StoreLeadActivityRequest;
 use App\Http\Requests\StoreLeadRequest;
 use App\Http\Requests\UpdateLeadRequest;
+use App\Jobs\SendLeadActivityNotification;
 use App\Models\Company;
 use App\Models\Lead;
 use App\Models\LeadActivity;
@@ -27,13 +28,41 @@ class SalesController extends Controller
      */
     public function kanban()
     {
-        $leads = [
-            ['id' => 1, 'title' => 'Lead 1', 'status' => 'Prospecting', 'value' => '$5,000'],
-            ['id' => 2, 'title' => 'Lead 2', 'status' => 'Qualified', 'value' => '$8,000'],
-            ['id' => 3, 'title' => 'Lead 3', 'status' => 'Negotiation', 'value' => '$12,000'],
-        ];
+        $companyId = request()->user()->company_id;
+        $statuses = LeadSetting::query()
+            ->where('setting_type', 'status')
+            ->where('is_active', true)
+            ->where(function ($query) use ($companyId) {
+                $query->whereNull('company_id')->orWhere('company_id', $companyId);
+            })
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->pluck('name');
+        $leads = Lead::query()->where('company_id', $companyId)->with('assignee:id,name')->latest()->get();
+        $formData = $this->leadFormData(request());
 
-        return view('app.sales.kanban', compact('leads'));
+        return view('app.sales.kanban', compact('leads', 'statuses') + $formData);
+    }
+
+    public function updateKanbanStatus(Request $request, Lead $lead): JsonResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $companyId = (int) $request->user()->company_id;
+        $status = $request->validate([
+            'status' => ['required', 'string', Rule::exists('lead_settings', 'name')->where(fn ($query) => $query
+                ->where('setting_type', 'status')->where('is_active', true)
+                ->where(function ($query) use ($companyId) {
+                    $query->whereNull('company_id')->orWhere('company_id', $companyId);
+                }))],
+        ])['status'];
+
+        if ($lead->status !== $status) {
+            $oldStatus = $lead->status;
+            $lead->update(['status' => $status]);
+            $this->recordLeadEvent($lead, $request->user()->id, 'Status changed', $oldStatus.' -> '.$status);
+        }
+
+        return response()->json(['message' => 'Lead status updated.', 'status' => $lead->status]);
     }
 
     /**
@@ -47,14 +76,39 @@ class SalesController extends Controller
     /**
      * Store a new lead.
      */
-    public function storeLead(StoreLeadRequest $request): RedirectResponse
+    public function storeLead(StoreLeadRequest $request): RedirectResponse|JsonResponse
     {
         $companyId = $this->ensureCompany($request);
         $validated = $this->validatedLeadData($request->validated(), $companyId);
         $lead = Lead::create($validated + ['company_id' => $companyId, 'created_by' => $request->user()->id]);
         $this->recordLeadEvent($lead, $request->user()->id, 'Lead created', 'Lead was created.');
 
+        if ($request->expectsJson()) {
+            $lead->load('assignee:id,name');
+
+            return response()->json([
+                'message' => 'Lead created successfully!',
+                'status' => $lead->status,
+                'html' => view('components.sales.kanban-card', compact('lead'))->render(),
+            ], 201);
+        }
+
         return to_route('sales-all-list')->with('message', 'Lead created successfully!');
+    }
+
+    public function kanbanLeadDetails(Request $request, Lead $lead): JsonResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $lead->load([
+            'assignee:id,name',
+            'creator:id,name',
+            'activities' => fn ($query) => $query->with('user:id,name')->latest(),
+        ]);
+
+        return response()->json([
+            'name' => $lead->name,
+            'html' => view('components.sales.kanban-lead-details', compact('lead'))->render(),
+        ]);
     }
 
     public function editLead(Request $request, Lead $lead)
@@ -88,8 +142,10 @@ class SalesController extends Controller
     public function storeLeadActivity(StoreLeadActivityRequest $request, Lead $lead): RedirectResponse|JsonResponse
     {
         $this->ensureLeadBelongsToUserCompany($request, $lead);
-        $activity = $lead->activities()->create($this->activityData($request->validated(), $request->user()->id, $lead));
+        $validated = $request->validated();
+        $activity = $lead->activities()->create($this->activityData($validated, $request->user()->id, $lead));
         $lead->update(['last_activity_at' => now()]);
+        $this->queueLeadActivityNotification($activity);
 
         if ($request->hasFile('attachment')) {
             $file = $request->file('attachment');
@@ -136,11 +192,12 @@ class SalesController extends Controller
         $newSchedule = $newData['scheduled_at'] ? Carbon::parse($newData['scheduled_at'])->format('Y-m-d H:i') : null;
         if (in_array($activity->activity_type, ['followup', 'visit', 'gmeet'], true) && $oldSchedule !== $newSchedule) {
             $activity->update(['metadata' => array_merge($activity->metadata ?? [], ['activity_status' => 'rescheduled'])]);
-            $lead->activities()->create($newData);
+            $activity = $lead->activities()->create($newData);
         } else {
             $activity->update($newData);
         }
         $lead->update(['last_activity_at' => now()]);
+        $this->queueLeadActivityNotification($activity);
 
         return $this->activityResponse($request, $lead, 'Activity updated successfully!');
     }
@@ -400,7 +457,7 @@ class SalesController extends Controller
     private function activityData(array $validated, int $userId, Lead $lead): array
     {
         $activityType = $validated['activity_type'];
-        $subject = match ($activityType) {
+        $subject = $validated['subject'] ?? match ($activityType) {
             'notes' => 'Note added',
             'call' => 'Call note added',
             'followup' => 'Follow-up scheduled',
@@ -433,5 +490,12 @@ class SalesController extends Controller
     private function ensureActivityBelongsToLead(LeadActivity $activity, Lead $lead): void
     {
         abort_unless((int) $activity->lead_id === (int) $lead->id, 404);
+    }
+
+    private function queueLeadActivityNotification(LeadActivity $activity): void
+    {
+        if ($activity->scheduled_at && in_array($activity->activity_type, ['followup', 'visit', 'gmeet'], true)) {
+            SendLeadActivityNotification::dispatch($activity->id)->delay($activity->scheduled_at);
+        }
     }
 }

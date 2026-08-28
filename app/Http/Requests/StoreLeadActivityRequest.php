@@ -16,6 +16,7 @@ class StoreLeadActivityRequest extends FormRequest
     {
         return [
             'activity_type' => ['required', Rule::in(['notes', 'call', 'followup', 'visit', 'gmeet', 'email'])],
+            'subject' => ['nullable', 'string', 'max:255'],
             'summary' => ['nullable', 'string', 'max:65535'],
             'followup_date' => ['nullable', 'date', Rule::requiredIf(fn () => $this->activity_type === 'followup')],
             'followup_time' => ['nullable', 'date_format:H:i', Rule::requiredIf(fn () => $this->activity_type === 'followup')],

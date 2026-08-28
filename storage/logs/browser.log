@@ -199,3 +199,15 @@
     at Modal.getOrCreateInstance (webpack-internal:///./node_modules/bootstrap/dist/js/bootstrap.esm.js:792:43)
     at HTMLAnchorElement.eval (webpack-internal:///./node_modules/bootstrap/dist/js/bootstrap.esm.js:3507:20)
     at HTMLDocument.handler (webpack-internal:///./node_modules/bootstrap/dist/js/bootstrap.esm.js:459:21) {"url":"http://127.0.0.1:8000/sales/lead-view","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36","timestamp":"2026-08-20T15:13:20.892Z"} 
+[2026-08-28 13:24:03] local.ERROR: Uncaught TypeError: Cannot read properties of null (reading 'content') http://127.0.0.1:8000/sales/kanban 906 68 TypeError Cannot read properties of null (reading 'content') TypeError: Cannot read properties of null (reading 'content')
+    at http://127.0.0.1:8000/sales/kanban:906:68
+    at http://127.0.0.1:8000/sales/kanban:933:3 {"url":"http://127.0.0.1:8000/sales/kanban","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36","timestamp":"2026-08-28T13:24:02.987Z"} 
+[2026-08-28 13:24:03] local.ERROR: Uncaught TypeError: Cannot read properties of null (reading 'content') http://127.0.0.1:8000/sales/kanban 906 68 TypeError Cannot read properties of null (reading 'content') TypeError: Cannot read properties of null (reading 'content')
+    at http://127.0.0.1:8000/sales/kanban:906:68
+    at http://127.0.0.1:8000/sales/kanban:933:3 {"url":"http://127.0.0.1:8000/sales/kanban","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36","timestamp":"2026-08-28T13:24:02.990Z"} 
+[2026-08-28 13:24:11] local.ERROR: Uncaught TypeError: Cannot read properties of null (reading 'content') http://127.0.0.1:8000/sales/kanban 906 68 TypeError Cannot read properties of null (reading 'content') TypeError: Cannot read properties of null (reading 'content')
+    at http://127.0.0.1:8000/sales/kanban:906:68
+    at http://127.0.0.1:8000/sales/kanban:933:3 {"url":"http://127.0.0.1:8000/sales/kanban","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36","timestamp":"2026-08-28T13:24:10.129Z"} 
+[2026-08-28 13:24:11] local.ERROR: Uncaught TypeError: Cannot read properties of null (reading 'content') http://127.0.0.1:8000/sales/kanban 906 68 TypeError Cannot read properties of null (reading 'content') TypeError: Cannot read properties of null (reading 'content')
+    at http://127.0.0.1:8000/sales/kanban:906:68
+    at http://127.0.0.1:8000/sales/kanban:933:3 {"url":"http://127.0.0.1:8000/sales/kanban","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36","timestamp":"2026-08-28T13:24:10.130Z"} 

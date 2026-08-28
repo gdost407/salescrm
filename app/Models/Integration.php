@@ -11,6 +11,12 @@ class Integration extends Model
 {
     use HasFactory;
 
+    protected $hidden = [
+        'api_key',
+        'api_secret',
+        'webhook_token',
+    ];
+
     protected $fillable = [
         'company_id', 'name', 'type', 'api_key', 'api_secret', 'webhook_token',
         'configuration', 'status',

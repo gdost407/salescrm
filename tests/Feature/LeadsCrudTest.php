@@ -149,3 +149,75 @@ test('a user can add an activity to a lead', function () {
         ->assertSee('Introductory call')
         ->assertSee('Discussed requirements.');
 });
+
+test('kanban supports in-place lead creation, details, and status changes', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
+    $user = leadCrudUser($company);
+    LeadSetting::insert([
+        ['setting_type' => 'stage', 'name' => 'Qualification', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Open', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Won', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'source', 'name' => 'Referral', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+    ]);
+
+    $this->actingAs($user)->get(route('sale-kanban'))
+        ->assertSuccessful()
+        ->assertSee('Sales pipeline')
+        ->assertSee('Open');
+
+    $this->actingAs($user)->postJson(route('sales-leads.store'), leadCrudPayload(['assigned_to' => $user->id]))
+        ->assertCreated()
+        ->assertJsonPath('status', 'Open')
+        ->assertJsonPath('message', 'Lead created successfully!');
+
+    $lead = Lead::query()->firstOrFail();
+    LeadActivity::create([
+        'company_id' => $company->id,
+        'lead_id' => $lead->id,
+        'user_id' => $user->id,
+        'activity_type' => 'notes',
+        'subject' => 'Qualification note',
+        'summary' => 'Ready for a follow-up.',
+        'status' => 'completed',
+    ]);
+
+    $detailsResponse = $this->actingAs($user)->getJson(route('sales-leads.kanban-details', $lead))
+        ->assertSuccessful()
+        ->assertJsonPath('name', 'Jane Lead');
+
+    expect($detailsResponse->json('html'))->toContain('Qualification note');
+
+    $this->actingAs($user)->patchJson(route('sales-leads.status', $lead), ['status' => 'Won'])
+        ->assertSuccessful()
+        ->assertJsonPath('status', 'Won');
+
+    expect($lead->fresh()->status)->toBe('Won');
+});
+
+test('a visit activity can update the lead address', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
+    $user = leadCrudUser($company);
+    $lead = Lead::create([
+        'company_id' => $company->id,
+        'created_by' => $user->id,
+        'name' => 'Visit Lead',
+        'stage' => 'New',
+        'status' => 'New',
+        'source' => 'Self',
+    ]);
+
+    $this->actingAs($user)->postJson(route('sales-lead-activities.store', $lead), [
+        'activity_type' => 'visit',
+        'visit_address' => '1 Main Street',
+        'visit_country' => 'India',
+        'visit_state' => 'Maharashtra',
+        'visit_city' => 'Pulgaon',
+        'visit_zip' => '442302',
+        'visit_motive' => 'Site survey',
+        'visit_scheduled_at' => now()->addDay()->format('Y-m-d H:i:s'),
+        'mark_as_lead_address' => true,
+    ])->assertSuccessful();
+
+    expect($lead->fresh()->address)->toBe('1 Main Street')
+        ->and($lead->fresh()->city)->toBe('Pulgaon');
+});

@@ -134,6 +134,24 @@
         </li>
       </ul>
     </li>
+    <li class="menu-item <?php echo e(request()->routeIs('integration-*') ? 'active open' : ''); ?>">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons bx bx-dock-top"></i>
+        <div data-i18n="Account Settings">Market Place</div>
+      </a>
+      <ul class="menu-sub">
+        <li class="menu-item <?php echo e(request()->routeIs('integration-api-token') ? 'active' : ''); ?>">
+          <a href="<?php echo e(route('integration-api-token')); ?>" class="menu-link">
+            <div data-i18n="Account">API Token</div>
+          </a>
+        </li>
+        <li class="menu-item <?php echo e(request()->routeIs('integration-google-sheet') ? 'active' : ''); ?>">
+          <a href="<?php echo e(route('integration-google-sheet')); ?>" class="menu-link">
+            <div data-i18n="Notifications">Google Sheet</div>
+          </a>
+        </li>
+      </ul>
+    </li>
     <!-- <li class="menu-item">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-lock-open-alt"></i>
