@@ -42,6 +42,9 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
     Route::get('staff/create', [StaffController::class, 'create'])->name('staff-create');
     Route::post('staff/create', [StaffController::class, 'store'])->name('staff.store');
     Route::get('staff/manage', [StaffController::class, 'manage'])->name('staff-manage');
+    Route::get('staff/{staffUser}/edit', [StaffController::class, 'edit'])->name('staff.edit');
+    Route::put('staff/{staffUser}', [StaffController::class, 'update'])->name('staff.update');
+    Route::post('staff/{staffUser}/resend-password', [StaffController::class, 'resendPassword'])->name('staff.resend-password');
     Route::get('staff/roles', [StaffController::class, 'roles'])->name('staff-roles');
 
     // Settings Routes

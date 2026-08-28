@@ -107,15 +107,19 @@ return new class extends Migration
                     ->default(true);
             }
 
-            $existingIndexes = DB::select(
-                "SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'"
-            );
-            $indexNames = array_map(
-                static fn (object $index): string => $index->INDEX_NAME,
-                $existingIndexes
-            );
+            $isMysql = DB::getDriverName() === 'mysql';
+            $indexNames = [];
+            if ($isMysql) {
+                $existingIndexes = DB::select(
+                    "SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'users'"
+                );
+                $indexNames = array_map(
+                    static fn (object $index): string => $index->INDEX_NAME,
+                    $existingIndexes
+                );
+            }
 
-            if (! in_array('users_company_id_user_type_is_active_index', $indexNames, true)) {
+            if (! $isMysql || ! in_array('users_company_id_user_type_is_active_index', $indexNames, true)) {
                 $table->index([
                     'company_id',
                     'user_type',
@@ -123,7 +127,7 @@ return new class extends Migration
                 ]);
             }
 
-            if (! in_array('users_company_id_department_id_index', $indexNames, true)) {
+            if (! $isMysql || ! in_array('users_company_id_department_id_index', $indexNames, true)) {
                 $table->index([
                     'company_id',
                     'department_id',
@@ -131,16 +135,20 @@ return new class extends Migration
             }
         });
 
-        $foreignKeyColumns = DB::select(
-            "SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND REFERENCED_TABLE_NAME IS NOT NULL"
-        );
-        $foreignKeyColumnNames = array_map(
-            static fn (object $foreignKey): string => $foreignKey->COLUMN_NAME,
-            $foreignKeyColumns
-        );
+        $isMysql = DB::getDriverName() === 'mysql';
+        $foreignKeyColumnNames = [];
+        if ($isMysql) {
+            $foreignKeyColumns = DB::select(
+                "SELECT COLUMN_NAME FROM information_schema.KEY_COLUMN_USAGE WHERE CONSTRAINT_SCHEMA = DATABASE() AND TABLE_NAME = 'users' AND REFERENCED_TABLE_NAME IS NOT NULL"
+            );
+            $foreignKeyColumnNames = array_map(
+                static fn (object $foreignKey): string => $foreignKey->COLUMN_NAME,
+                $foreignKeyColumns
+            );
+        }
 
-        Schema::table('users', function (Blueprint $table) use ($foreignKeyColumnNames): void {
-            if (! in_array('role_id', $foreignKeyColumnNames, true)) {
+        Schema::table('users', function (Blueprint $table) use ($isMysql, $foreignKeyColumnNames): void {
+            if (! $isMysql || ! in_array('role_id', $foreignKeyColumnNames, true)) {
                 $table->foreign('role_id')
                     ->references('id')
                     ->on('roles')

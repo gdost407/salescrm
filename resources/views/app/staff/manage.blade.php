@@ -16,6 +16,13 @@
       </small>
     </div>
     <div class="card-body">
+      @if (session('message'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+          {{ session('message') }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      @endif
+
       <table class="table table-bordered responsive-leads-table">
         <thead>
           <tr>
@@ -25,8 +32,7 @@
             <th scope="col">Mobile Number</th>
             <th scope="col">Department</th>
             <th scope="col">Role</th>
-            <th scope="col">City</th>
-            <th scope="col">Zipcode</th>
+            <th scope="col">Status</th>
             <th scope="col">Actions</th>
           </tr>
         </thead>
@@ -39,12 +45,27 @@
               <td data-label="Mobile Number">{{ $staff->mobile ?: '-' }}</td>
               <td data-label="Department">{{ $staff->department ?: '-' }}</td>
               <td data-label="Role">{{ $staff->job_role ?: '-' }}</td>
-              <td data-label="City">{{ $staff->city ?: '-' }}</td>
-              <td data-label="Zipcode">{{ $staff->zip_code ?: '-' }}</td>
-              <td data-label="Actions">{{ $staff->is_active ? 'Active' : 'Inactive' }}</td>
+              <td data-label="Status">
+                <span class="badge {{ $staff->is_active ? 'bg-label-success' : 'bg-label-secondary' }}">
+                  {{ $staff->is_active ? 'Active' : 'Inactive' }}
+                </span>
+              </td>
+              <td data-label="Actions">
+                <div class="d-flex align-items-center gap-2">
+                  <a href="{{ route('staff.edit', $staff) }}" class="btn btn-sm btn-outline-primary" title="Edit Staff Member">
+                    <i class="icon-base bx bx-edit-alt"></i> Edit
+                  </a>
+                  <form action="{{ route('staff.resend-password', $staff) }}" method="POST" class="d-inline" onsubmit="return confirm('Send new password email to {{ $staff->name }} ({{ $staff->email }})?');">
+                    @csrf
+                    <button type="submit" class="btn btn-sm btn-outline-warning" title="Send Password to Staff User">
+                      <i class="icon-base bx bx-key"></i> Send Password
+                    </button>
+                  </form>
+                </div>
+              </td>
             </tr>
           @empty
-            <tr><td colspan="9" class="text-center">No staff members found.</td></tr>
+            <tr><td colspan="8" class="text-center">No staff members found.</td></tr>
           @endforelse
         </tbody>
       </table>

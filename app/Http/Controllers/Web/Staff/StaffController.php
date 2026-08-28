@@ -4,13 +4,13 @@ namespace App\Http\Controllers\Web\Staff;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreStaffRequest;
-use App\Mail\StaffCredentials;
+use App\Http\Requests\UpdateStaffRequest;
+use App\Jobs\SendStaffCredentialsEmail;
 use App\Models\Company;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -31,7 +31,7 @@ class StaffController extends Controller
     {
         $temporaryPassword = Str::random(16);
 
-        DB::transaction(function () use ($request, $temporaryPassword): void {
+        $staff = DB::transaction(function () use ($request, $temporaryPassword): User {
             $company = Company::query()
                 ->whereKey($request->user()->company_id)
                 ->lockForUpdate()
@@ -47,15 +47,15 @@ class StaffController extends Controller
                 abort(422, 'Your current plan does not allow any more staff members.');
             }
 
-            $staff = User::create([
+            return User::create([
                 ...$request->validated(),
                 'company_id' => $company->id,
                 'user_type' => 'staff',
                 'password' => $temporaryPassword,
             ]);
-
-            Mail::to($staff)->send(new StaffCredentials($staff, $temporaryPassword));
         });
+
+        SendStaffCredentialsEmail::dispatch($staff, $temporaryPassword);
 
         return redirect()->route('staff-manage')->with('message', 'Staff member created successfully!');
     }
@@ -72,6 +72,52 @@ class StaffController extends Controller
             ->get();
 
         return view('app.staff.manage', compact('staffMembers'));
+    }
+
+    /**
+     * Show edit staff form.
+     */
+    public function edit(Request $request, User $staffUser): View
+    {
+        $currentUser = $request->user();
+        if ($currentUser && $staffUser->company_id !== $currentUser->company_id) {
+            abort(404);
+        }
+
+        return view('app.staff.edit', ['staff' => $staffUser]);
+    }
+
+    /**
+     * Update staff member details.
+     */
+    public function update(UpdateStaffRequest $request, User $staffUser): RedirectResponse
+    {
+        $currentUser = $request->user();
+        if ($currentUser && $staffUser->company_id !== $currentUser->company_id) {
+            abort(404);
+        }
+
+        $staffUser->update($request->validated());
+
+        return redirect()->route('staff-manage')->with('message', 'Staff member updated successfully!');
+    }
+
+    /**
+     * Resend password credentials email to staff user.
+     */
+    public function resendPassword(Request $request, User $staffUser): RedirectResponse
+    {
+        $currentUser = $request->user();
+        if ($currentUser && $staffUser->company_id !== $currentUser->company_id) {
+            abort(404);
+        }
+
+        $temporaryPassword = Str::random(16);
+        $staffUser->update(['password' => $temporaryPassword]);
+
+        SendStaffCredentialsEmail::dispatch($staffUser, $temporaryPassword);
+
+        return redirect()->route('staff-manage')->with('message', 'Password email sent to '.$staffUser->email.' successfully!');
     }
 
     /**
