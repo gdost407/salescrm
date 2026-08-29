@@ -41,3 +41,4 @@ jobs:
             php artisan up
             # rm -rf build
             # cp -r public/build .
+            
