@@ -75,6 +75,13 @@
       </a>
     </li>
 
+    <li class="menu-item {{ request()->routeIs('calendar') ? 'active' : '' }}">
+      <a href="{{ route('calendar') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-calendar"></i>
+        <div data-i18n="Analytics">Calendar</div>
+      </a>
+    </li>
+
     <li class="menu-item {{ request()->routeIs('sale-kanban') ? 'active' : '' }}">
       <a href="{{ route('sale-kanban') }}" class="menu-link">
         <i class="menu-icon tf-icons bx bx-home-circle"></i>

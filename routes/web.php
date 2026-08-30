@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\Webhook\LeadWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Web\Integration\ApiTokenController;
+use App\Http\Controllers\Web\CalendarController;
 use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
@@ -32,6 +33,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])->group(function () {
+    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar');
     // Sales Routes
     Route::prefix('sales')->group(function () {
         Route::get('kanban', [SalesController::class, 'kanban'])->name('sale-kanban');
