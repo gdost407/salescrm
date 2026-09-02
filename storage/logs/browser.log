@@ -221,3 +221,9 @@
 [2026-09-02 17:17:43] local.ERROR: Script error. null 0 0 null {"url":"http://localhost:8001/calendar","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Code/1.135.0 Chrome/148.0.7778.280 Electron/42.8.1 Safari/537.36","timestamp":"2026-09-02T17:17:41.569Z"} 
 [2026-09-02 17:18:35] local.ERROR: Script error. null 0 0 null {"url":"http://localhost:8001/calendar","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36","timestamp":"2026-09-02T17:18:33.817Z"} 
 [2026-09-02 17:18:35] local.ERROR: Script error. null 0 0 null {"url":"http://localhost:8001/calendar","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36","timestamp":"2026-09-02T17:18:33.817Z"} 
+[2026-09-02 17:46:42] local.ERROR: Unhandled Promise Rejection TypeError Cannot set properties of null (setting 'textContent') TypeError: Cannot set properties of null (setting 'textContent')
+    at render (http://localhost:8001/calendar:1752:39)
+    at http://localhost:8001/calendar:1806:55 {"url":"http://localhost:8001/calendar","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36","timestamp":"2026-09-02T17:46:42.051Z"} 
+[2026-09-02 17:47:00] local.ERROR: Unhandled Promise Rejection TypeError Cannot set properties of null (setting 'textContent') TypeError: Cannot set properties of null (setting 'textContent')
+    at render (http://localhost:8001/calendar:1752:39)
+    at http://localhost:8001/calendar:1806:55 {"url":"http://localhost:8001/calendar","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36","timestamp":"2026-09-02T17:47:00.233Z"} 

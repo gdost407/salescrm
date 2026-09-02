@@ -318,7 +318,7 @@
             display: grid;
 
             grid-template-columns: repeat(7, 1fr);
-            grid-template-rows: 48px repeat(5, 1fr);
+            grid-template-rows: 48px repeat(6, 1fr);
 
             border-left: 0;
         }
@@ -431,6 +431,44 @@
         .event-green {
             background: #def8d9;
             color: #50c72d;
+        }
+
+        .calendar-day .dynamic-event {
+            position: relative;
+            top: auto;
+            left: auto;
+            right: auto;
+            width: auto;
+            margin: 42px 10px 0;
+        }
+
+        .calendar-day .dynamic-event + .dynamic-event {
+            margin-top: 7px;
+        }
+
+        .calendar-day.has-events {
+            overflow-y: auto;
+        }
+
+        [data-calendar-grid-days] {
+            display: contents;
+        }
+
+        .calendar-day .dynamic-event {
+            position: relative;
+            top: auto;
+            left: auto;
+            right: auto;
+            width: auto;
+            margin: 42px 10px 0;
+        }
+
+        .calendar-day .dynamic-event + .dynamic-event {
+            margin-top: 7px;
+        }
+
+        .calendar-day.has-events {
+            overflow-y: auto;
         }
 
         /* Event positions */
@@ -554,440 +592,207 @@
             }
         }
     </style>
-<div class="container-xxl flex-grow-1 container-p-y calendar-page">
-  <div class="card calendar-card">
-
-        <div class="calendar-wrapper">
-
-            <!-- =========================================
-                 LEFT SIDEBAR
-            ========================================== -->
-
-            <aside class="calendar-sidebar">
-
-                <!-- Add Event -->
-                <div class="add-event-wrapper">
-
-                    <button class="btn btn-add-event">
-                        <i class="bi bi-plus-lg"></i>
-                        Add Event
-                    </button>
-
-                </div>
-
-
-                <!-- Mini Calendar -->
-                <div class="mini-calendar-wrapper">
-
-                    <div class="mini-calendar-title">
-
-                        <button class="mini-nav-btn">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-
-                        <span class="mini-month-name">
-                            September&nbsp; 2026
-                        </span>
-
-                        <button class="mini-nav-btn">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-
-                    </div>
-
-
-                    <table class="mini-calendar">
-
-                        <thead>
-                            <tr>
-                                <th>Sun</th>
-                                <th>Mon</th>
-                                <th>Tue</th>
-                                <th>Wed</th>
-                                <th>Thu</th>
-                                <th>Fri</th>
-                                <th>Sat</th>
-                            </tr>
-                        </thead>
-
-                        <tbody>
-
-                            <tr>
-                                <td class="muted">30</td>
-                                <td class="muted">31</td>
-                                <td>1</td>
-                                <td class="selected">
-                                    <span>2</span>
-                                </td>
-                                <td>3</td>
-                                <td>4</td>
-                                <td>5</td>
-                            </tr>
-
-                            <tr>
-                                <td>6</td>
-                                <td>7</td>
-                                <td>8</td>
-                                <td>9</td>
-                                <td>10</td>
-                                <td>11</td>
-                                <td>12</td>
-                            </tr>
-
-                            <tr>
-                                <td>13</td>
-                                <td>14</td>
-                                <td>15</td>
-                                <td>16</td>
-                                <td>17</td>
-                                <td>18</td>
-                                <td>19</td>
-                            </tr>
-
-                            <tr>
-                                <td>20</td>
-                                <td>21</td>
-                                <td>22</td>
-                                <td>23</td>
-                                <td>24</td>
-                                <td>25</td>
-                                <td>26</td>
-                            </tr>
-
-                            <tr>
-                                <td>27</td>
-                                <td>28</td>
-                                <td>29</td>
-                                <td>30</td>
-                                <td class="muted">1</td>
-                                <td class="muted">2</td>
-                                <td class="muted">3</td>
-                            </tr>
-
-                            <tr>
-                                <td class="muted">4</td>
-                                <td class="muted">5</td>
-                                <td class="muted">6</td>
-                                <td class="muted">7</td>
-                                <td class="muted">8</td>
-                                <td class="muted">9</td>
-                                <td class="muted">10</td>
-                            </tr>
-
-                        </tbody>
-
-                    </table>
-
-                </div>
-
-
-                <!-- Event Filters -->
-                <div class="event-filters">
-
-                    <h4>Event Filters</h4>
-
-                    <div class="filter-item">
-                        <span class="filter-check filter-all">
-                            <i class="bi bi-check-lg"></i>
-                        </span>
-                        <span>View All</span>
-                    </div>
-
-                    <div class="filter-item">
-                        <span class="filter-check filter-personal">
-                            <i class="bi bi-check-lg"></i>
-                        </span>
-                        <span>Personal</span>
-                    </div>
-
-                    <div class="filter-item">
-                        <span class="filter-check filter-business">
-                            <i class="bi bi-check-lg"></i>
-                        </span>
-                        <span>Business</span>
-                    </div>
-
-                    <div class="filter-item">
-                        <span class="filter-check filter-family">
-                            <i class="bi bi-check-lg"></i>
-                        </span>
-                        <span>Family</span>
-                    </div>
-
-                </div>
-
-            </aside>
-
-
-            <!-- =========================================
-                 RIGHT MAIN CALENDAR
-            ========================================== -->
-
-            <main class="calendar-main">
-
-                <!-- Calendar Header -->
-
-                <div class="calendar-header">
-
-                    <div class="calendar-header-left">
-
-                        <button class="calendar-arrow">
-                            <i class="bi bi-chevron-left"></i>
-                        </button>
-
-                        <button class="calendar-arrow">
-                            <i class="bi bi-chevron-right"></i>
-                        </button>
-
-                        <h1 class="calendar-month-title">
-                            September 2026
-                        </h1>
-
-                    </div>
-
-
-                    <!-- View Buttons -->
-
-                    <div class="calendar-view-buttons">
-
-                        <button class="btn active">
-                            Month
-                        </button>
-
-                        <button class="btn">
-                            Week
-                        </button>
-
-                        <button class="btn">
-                            Day
-                        </button>
-
-                        <button class="btn">
-                            List
-                        </button>
-
-                    </div>
-
-                </div>
-
-
-                <!-- =========================================
-                     CALENDAR GRID
-                ========================================== -->
-
-                <div class="calendar-grid">
-
-                    <!-- Weekdays -->
-
-                    <div class="weekday">Sun</div>
-                    <div class="weekday">Mon</div>
-                    <div class="weekday">Tue</div>
-                    <div class="weekday">Wed</div>
-                    <div class="weekday">Thu</div>
-                    <div class="weekday">Fri</div>
-                    <div class="weekday">Sat</div>
-
-
-                    <!-- ROW 1 -->
-
-                    <div class="calendar-day">
-                        <span class="day-number muted">30</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number muted">31</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">1</span>
-                    </div>
-
-                    <div class="calendar-day today-cell">
-
-                        <span class="day-number">2</span>
-
-                        <div class="event event-purple event-design">
-                            11:02p Design Review
-                        </div>
-
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">3</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">4</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">5</span>
-                    </div>
-
-
-                    <!-- ROW 2 -->
-
-                    <div class="calendar-day">
-                        <span class="day-number">6</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">7</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">8</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">9</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">10</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">11</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">12</span>
-                    </div>
-
-
-                    <!-- ROW 3 -->
-
-                    <div class="calendar-day">
-                        <span class="day-number">13</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">14</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">15</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">16</span>
-                    </div>
-
-                    <div class="calendar-day">
-
-                        <span class="day-number">17</span>
-
-                        <div class="event event-orange event-dinner">
-                            12a Dinner
-                        </div>
-
-                        <div class="event event-cyan event-dart">
-                            Dart Game?
-                        </div>
-
-                        <span class="more-events">
-                            +2 more
-                        </span>
-
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">18</span>
-                    </div>
-
-                    <div class="calendar-day">
-
-                        <span class="day-number">19</span>
-
-                        <div class="event event-red event-doctor">
-                            12a Doctor's App
-                        </div>
-
-                        <div class="event event-purple event-meeting">
-                            Meeting With Client
-                        </div>
-
-                    </div>
-
-
-                    <!-- ROW 4 -->
-
-                    <div class="calendar-day">
-                        <span class="day-number">20</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">21</span>
-
-                        <div class="event event-green event-family">
-                            Family Trip
-                        </div>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">22</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">23</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">24</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">25</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">26</span>
-                    </div>
-
-
-                    <!-- ROW 5 -->
-
-                    <div class="calendar-day">
-                        <span class="day-number">27</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">28</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">29</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number">30</span>
-                    </div>
-
-                    <div class="calendar-day">
-
-                        <span class="day-number muted">1</span>
-
-                        <div class="event event-purple event-monthly">
-                            Monthly Meeting
-                        </div>
-
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number muted">2</span>
-                    </div>
-
-                    <div class="calendar-day">
-                        <span class="day-number muted">3</span>
-                    </div>
-
-                </div>
-
-            </main>
+<div class="container-xxl flex-grow-1 container-p-y">
+  <div class="card">
+    <div class="row">
+      <div class="col-sm-3">
+        <!-- Mini Calendar -->
+        <div class="border mini-calendar-wrapper">
+          <div class="mini-calendar-title">
+            <button class="mini-nav-btn" data-calendar-previous aria-label="Previous month">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <span class="mini-month-name" data-calendar-mini-title></span>
+            <button class="mini-nav-btn" data-calendar-next aria-label="Next month">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+          </div>
+          <table id="mini-calendar" class="mini-calendar">
+            <thead>
+              <tr>
+                <th>Sun</th>
+                <th>Mon</th>
+                <th>Tue</th>
+                <th>Wed</th>
+                <th>Thu</th>
+                <th>Fri</th>
+                <th>Sat</th>
+              </tr>
+            </thead>
+            <tbody data-calendar-mini-grid></tbody>
+          </table>
+        </div>
+        <!-- Event Filters -->
+        <div class="event-filters">
+
+            <h4>Event Filters</h4>
+
+            <div class="filter-item" data-type="all">
+                <span class="filter-check filter-all">
+                    <i class="bi bi-check-lg"></i>
+                </span>
+                <span>View All</span>
+            </div>
+
+            <div class="filter-item" data-type="followup">
+                <span class="filter-check filter-personal">
+                    <i class="bi bi-check-lg"></i>
+                </span>
+                <span>Personal</span>
+            </div>
+
+            <div class="filter-item" data-type="visit">
+                <span class="filter-check filter-business">
+                    <i class="bi bi-check-lg"></i>
+                </span>
+                <span>Business</span>
+            </div>
+
+            <div class="filter-item" data-type="gmeet">
+                <span class="filter-check filter-family">
+                    <i class="bi bi-check-lg"></i>
+                </span>
+                <span>Family</span>
+            </div>
 
         </div>
-
+      </div>
+      <div class="col-sm-9">
+        <div class="calendar-header d-none">
+          <div class="calendar-header-left">
+            <button class="calendar-arrow" data-calendar-previous aria-label="Previous month">
+              <i class="bi bi-chevron-left"></i>
+            </button>
+            <button class="calendar-arrow" data-calendar-next aria-label="Next month">
+              <i class="bi bi-chevron-right"></i>
+            </button>
+            <h1 class="calendar-month-title" data-calendar-title></h1>
+          </div>
+        </div>
+        <div class="calendar-grid border">
+          <div class="weekday">Sun</div>
+          <div class="weekday">Mon</div>
+          <div class="weekday">Tue</div>
+          <div class="weekday">Wed</div>
+          <div class="weekday">Thu</div>
+          <div class="weekday">Fri</div>
+          <div class="weekday">Sat</div>
+          <div data-calendar-grid-days></div>
+        </div>
+      </div>
     </div>
+  </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+    (() => {
+        const calendarGrid = document.querySelector('[data-calendar-grid-days]');
+        const miniGrid = document.querySelector('[data-calendar-mini-grid]');
+        const calendarTitle = document.querySelector('[data-calendar-title]');
+        const miniTitle = document.querySelector('[data-calendar-mini-title]');
+        const monthFormatter = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
+        const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
+        const eventClasses = { followup: 'event-purple', visit: 'event-orange', gmeet: 'event-green' };
+        const today = new Date();
+        const state = {
+            month: new Date(today.getFullYear(), today.getMonth(), 1),
+            events: [],
+            filters: new Set(['followup', 'visit', 'gmeet']),
+        };
+
+        const dateKey = (date) => [
+            date.getFullYear(),
+            String(date.getMonth() + 1).padStart(2, '0'),
+            String(date.getDate()).padStart(2, '0'),
+        ].join('-');
+
+        const createDay = (date, isCurrentMonth) => {
+            const day = document.createElement('div');
+            day.className = `calendar-day${dateKey(date) === dateKey(today) ? ' today-cell' : ''}`;
+            const number = document.createElement('span');
+            number.className = `day-number${isCurrentMonth ? '' : ' muted'}`;
+            number.textContent = date.getDate();
+            day.appendChild(number);
+
+            state.events
+                .filter((event) => event.start.slice(0, 10) === dateKey(date))
+                .filter((event) => state.filters.has(event.extendedProps.activityType))
+                .forEach((event) => {
+                    const item = document.createElement('div');
+                    const type = event.extendedProps.activityType;
+                    item.className = `event dynamic-event ${eventClasses[type] || 'event-purple'}`;
+                    item.title = event.title;
+                    item.textContent = `${timeFormatter.format(new Date(event.start))} ${event.title}`;
+                    day.appendChild(item);
+                });
+
+            if (day.children.length > 1) day.classList.add('has-events');
+            return day;
+        };
+
+        const render = () => {
+            const year = state.month.getFullYear();
+            const month = state.month.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const start = new Date(year, month, 1 - firstDay.getDay());
+            const title = monthFormatter.format(state.month);
+            calendarTitle.textContent = title;
+            miniTitle.textContent = title;
+            calendarGrid.innerHTML = '';
+            miniGrid.innerHTML = '';
+
+            for (let index = 0; index < 42; index += 1) {
+                const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+                calendarGrid.appendChild(createDay(date, date.getMonth() === month));
+                if (index % 7 === 0) miniGrid.appendChild(document.createElement('tr'));
+                const cell = document.createElement('td');
+                cell.className = date.getMonth() === month ? '' : 'muted';
+                if (dateKey(date) === dateKey(today)) cell.classList.add('selected');
+                const cellContent = document.createElement('span');
+                cellContent.textContent = date.getDate();
+                cell.appendChild(cellContent);
+                miniGrid.lastElementChild.appendChild(cell);
+            }
+        };
+
+        const loadEvents = async () => {
+            const year = state.month.getFullYear();
+            const month = state.month.getMonth();
+            const firstDay = new Date(year, month, 1);
+            const start = new Date(year, month, 1 - firstDay.getDay());
+            const end = new Date(year, month + 1, 7 - new Date(year, month + 1, 1).getDay());
+            const response = await fetch(`{{ route('calendar.events') }}?start=${dateKey(start)}&end=${dateKey(end)}`, {
+                headers: { Accept: 'application/json' },
+            });
+            state.events = response.ok ? await response.json() : [];
+            render();
+        };
+
+        const miniCalendarInstance = { dateClick: (date) => {
+            state.month = new Date(date.getFullYear(), date.getMonth(), 1);
+            loadEvents();
+        } };
+
+        document.querySelectorAll('[data-calendar-previous]').forEach((button) => button.addEventListener('click', () => {
+            state.month = new Date(state.month.getFullYear(), state.month.getMonth() - 1, 1);
+            loadEvents();
+        }));
+        document.querySelectorAll('[data-calendar-next]').forEach((button) => button.addEventListener('click', () => {
+            state.month = new Date(state.month.getFullYear(), state.month.getMonth() + 1, 1);
+            loadEvents();
+        }));
+        document.querySelectorAll('.event-filters .filter-item').forEach((filter) => filter.addEventListener('click', () => {
+            const type = filter.dataset.type;
+            state.filters = type === 'all'
+                ? new Set(['followup', 'visit', 'gmeet'])
+                : (state.filters.has(type) ? new Set([...state.filters].filter((item) => item !== type)) : new Set([...state.filters, type]));
+            render();
+        }));
+
+        void miniCalendarInstance;
+        loadEvents().catch(() => { state.events = []; render(); });
+    })();
+</script>
+@endpush
