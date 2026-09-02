@@ -2,6 +2,7 @@
 <html lang="en" class="light-style layout-menu-fixed" dir="ltr" data-theme="theme-default" data-assets-path="../assets/" data-template="vertical-menu-template-free">
 <head>
     @include('partials.head')
+    @stack('styles')
 </head>
 
 <body>
@@ -63,5 +64,6 @@
     })();
   </script>
   @include('partials.foot')
+  @stack('scripts')
 </body>
 </html>

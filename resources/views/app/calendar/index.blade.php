@@ -1,152 +1,485 @@
 @extends('layouts.app')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css">
+<style>
+  .fc .fc-button-primary {
+    background-color: #696cff;
+    border-color: #696cff;
+  }
+  .fc .fc-button-primary:hover,
+  .fc .fc-button-primary:not(:disabled):active,
+  .fc .fc-button-primary:not(:disabled).fc-button-active {
+    background-color: #5a5ccf;
+    border-color: #5a5ccf;
+  }
+  .fc-event {
+    border-radius: 4px !important;
+    font-size: .78rem !important;
+    cursor: pointer;
+  }
+  .fc .fc-day-today {
+    background-color: rgba(105, 108, 255, .06) !important;
+  }
+  .upcoming-event-item:hover {
+    background: rgba(105,108,255,.04);
+    border-radius: 8px;
+    transition: background .15s ease;
+  }
+  .letter-spacing-1 { letter-spacing: .05em; }
+  .cursor-pointer { cursor: pointer; }
+  .fc-toolbar-title { font-size: 1rem !important; font-weight: 600 !important; }
+  .calendar-stat { border-left: 3px solid var(--calendar-stat-color); }
+  .calendar-stat-value { font-size: 1.35rem; line-height: 1; }
+  #calendar-error { display: none; }
+  @media (max-width: 767.98px) {
+    .app-calendar-sidebar { width: 100% !important; min-height: auto !important; }
+    .app-calendar-content .card-body { padding: 1rem !important; }
+    .fc .fc-toolbar { flex-wrap: wrap; gap: .65rem; }
+    .fc .fc-toolbar-chunk { display: flex; align-items: center; }
+  }
+</style>
+@endpush
+
+
 @section('content')
 <div class="container-xxl flex-grow-1 container-p-y">
-  <div class="card app-calendar-wrapper">
+
+  {{-- Page header --}}
+  <div class="d-flex align-items-center justify-content-between mb-4">
+    <div>
+      <h4 class="mb-1 fw-semibold">Sales Calendar</h4>
+      <p class="text-muted mb-0 small">Upcoming follow-ups, site visits &amp; meetings</p>
+    </div>
+  </div>
+
+  <div class="row g-3 mb-4" aria-label="Calendar activity summary">
+    <div class="col-12 col-sm-4">
+      <div class="card border-0 shadow-sm h-100 calendar-stat" style="--calendar-stat-color:#696cff;">
+        <div class="card-body py-3 d-flex align-items-center justify-content-between">
+          <div><div class="text-muted small">Follow-ups</div><div class="calendar-stat-value fw-semibold" id="stat-followup">0</div></div>
+          <i class="bx bx-phone-call fs-2" style="color:#696cff;" aria-hidden="true"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-4">
+      <div class="card border-0 shadow-sm h-100 calendar-stat" style="--calendar-stat-color:#fd7e14;">
+        <div class="card-body py-3 d-flex align-items-center justify-content-between">
+          <div><div class="text-muted small">Site visits</div><div class="calendar-stat-value fw-semibold" id="stat-visit">0</div></div>
+          <i class="bx bx-map-pin fs-2" style="color:#fd7e14;" aria-hidden="true"></i>
+        </div>
+      </div>
+    </div>
+    <div class="col-12 col-sm-4">
+      <div class="card border-0 shadow-sm h-100 calendar-stat" style="--calendar-stat-color:#28a745;">
+        <div class="card-body py-3 d-flex align-items-center justify-content-between">
+          <div><div class="text-muted small">Meetings</div><div class="calendar-stat-value fw-semibold" id="stat-gmeet">0</div></div>
+          <i class="bx bx-video fs-2" style="color:#28a745;" aria-hidden="true"></i>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card app-calendar-wrapper shadow-sm border-0">
     <div class="row g-0">
-      <!-- Calendar Sidebar -->
-      <div class="col app-calendar-sidebar border-end" id="app-calendar-sidebar">
-        <div class="border-bottom p-6 my-sm-0 mb-4">
-          <button class="btn btn-primary btn-toggle-sidebar w-100" data-bs-toggle="offcanvas" data-bs-target="#addEventSidebar" aria-controls="addEventSidebar">
-            <i class="icon-base bx bx-plus icon-16px me-2"></i>
-            <span class="align-middle">Add Event</span>
-          </button>
-        </div>
-        <div class="px-3 pt-2">
-          <!-- inline calendar (flatpicker) -->
-          <div class="flatpickr-wrapper"><div class="inline-calendar flatpickr-input" readonly="readonly"></div><div class="flatpickr-calendar animate inline" tabindex="-1"><div class="flatpickr-months"><span class="flatpickr-prev-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M5.207 8.471l7.146 7.147-0.707 0.707-7.853-7.854 7.854-7.853 0.707 0.707-7.147 7.146z"></path></svg></span><div class="flatpickr-month"><div class="flatpickr-current-month"><span class="cur-month">August </span><div class="numInputWrapper"><input class="numInput cur-year" type="number" tabindex="-1" aria-label="Year"><span class="arrowUp"></span><span class="arrowDown"></span></div></div></div><span class="flatpickr-next-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M13.207 8.472l-7.854 7.854-0.707-0.707 7.146-7.146-7.146-7.148 0.707-0.707 7.854 7.854z"></path></svg></span></div><div class="flatpickr-innerContainer"><div class="flatpickr-rContainer"><div class="flatpickr-weekdays"><div class="flatpickr-weekdaycontainer">
-      <span class="flatpickr-weekday">
-        Sun</span><span class="flatpickr-weekday">Mon</span><span class="flatpickr-weekday">Tue</span><span class="flatpickr-weekday">Wed</span><span class="flatpickr-weekday">Thu</span><span class="flatpickr-weekday">Fri</span><span class="flatpickr-weekday">Sat
-      </span>
-      </div></div><div class="flatpickr-days" tabindex="-1"><div class="dayContainer"><span class="flatpickr-day prevMonthDay" aria-label="July 26, 2026" tabindex="-1">26</span><span class="flatpickr-day prevMonthDay" aria-label="July 27, 2026" tabindex="-1">27</span><span class="flatpickr-day prevMonthDay" aria-label="July 28, 2026" tabindex="-1">28</span><span class="flatpickr-day prevMonthDay" aria-label="July 29, 2026" tabindex="-1">29</span><span class="flatpickr-day prevMonthDay" aria-label="July 30, 2026" tabindex="-1">30</span><span class="flatpickr-day prevMonthDay" aria-label="July 31, 2026" tabindex="-1">31</span><span class="flatpickr-day" aria-label="August 1, 2026" tabindex="-1">1</span><span class="flatpickr-day" aria-label="August 2, 2026" tabindex="-1">2</span><span class="flatpickr-day" aria-label="August 3, 2026" tabindex="-1">3</span><span class="flatpickr-day" aria-label="August 4, 2026" tabindex="-1">4</span><span class="flatpickr-day" aria-label="August 5, 2026" tabindex="-1">5</span><span class="flatpickr-day" aria-label="August 6, 2026" tabindex="-1">6</span><span class="flatpickr-day" aria-label="August 7, 2026" tabindex="-1">7</span><span class="flatpickr-day" aria-label="August 8, 2026" tabindex="-1">8</span><span class="flatpickr-day" aria-label="August 9, 2026" tabindex="-1">9</span><span class="flatpickr-day" aria-label="August 10, 2026" tabindex="-1">10</span><span class="flatpickr-day" aria-label="August 11, 2026" tabindex="-1">11</span><span class="flatpickr-day" aria-label="August 12, 2026" tabindex="-1">12</span><span class="flatpickr-day" aria-label="August 13, 2026" tabindex="-1">13</span><span class="flatpickr-day" aria-label="August 14, 2026" tabindex="-1">14</span><span class="flatpickr-day" aria-label="August 15, 2026" tabindex="-1">15</span><span class="flatpickr-day" aria-label="August 16, 2026" tabindex="-1">16</span><span class="flatpickr-day" aria-label="August 17, 2026" tabindex="-1">17</span><span class="flatpickr-day" aria-label="August 18, 2026" tabindex="-1">18</span><span class="flatpickr-day" aria-label="August 19, 2026" tabindex="-1">19</span><span class="flatpickr-day" aria-label="August 20, 2026" tabindex="-1">20</span><span class="flatpickr-day" aria-label="August 21, 2026" tabindex="-1">21</span><span class="flatpickr-day" aria-label="August 22, 2026" tabindex="-1">22</span><span class="flatpickr-day" aria-label="August 23, 2026" tabindex="-1">23</span><span class="flatpickr-day" aria-label="August 24, 2026" tabindex="-1">24</span><span class="flatpickr-day" aria-label="August 25, 2026" tabindex="-1">25</span><span class="flatpickr-day" aria-label="August 26, 2026" tabindex="-1">26</span><span class="flatpickr-day" aria-label="August 27, 2026" tabindex="-1">27</span><span class="flatpickr-day" aria-label="August 28, 2026" tabindex="-1">28</span><span class="flatpickr-day" aria-label="August 29, 2026" tabindex="-1">29</span><span class="flatpickr-day today" aria-label="August 30, 2026" aria-current="date" tabindex="-1">30</span><span class="flatpickr-day" aria-label="August 31, 2026" tabindex="-1">31</span><span class="flatpickr-day nextMonthDay" aria-label="September 1, 2026" tabindex="-1">1</span><span class="flatpickr-day nextMonthDay" aria-label="September 2, 2026" tabindex="-1">2</span><span class="flatpickr-day nextMonthDay" aria-label="September 3, 2026" tabindex="-1">3</span><span class="flatpickr-day nextMonthDay" aria-label="September 4, 2026" tabindex="-1">4</span><span class="flatpickr-day nextMonthDay" aria-label="September 5, 2026" tabindex="-1">5</span></div></div></div></div></div></div>
-        </div>
-        <hr class="mb-6 mx-n4 mt-3">
-        <div class="px-6 pb-2">
-          <!-- Filter -->
-          <div>
-            <h5>Event Filters</h5>
-          </div>
 
-          <div class="form-check form-check-secondary mb-5 ms-2">
-            <input class="form-check-input select-all" type="checkbox" id="selectAll" data-value="all" checked="">
-            <label class="form-check-label" for="selectAll">View All</label>
-          </div>
+      {{-- ===== SIDEBAR ===== --}}
+      <div class="col-auto app-calendar-sidebar border-end d-flex flex-column" id="app-calendar-sidebar" style="width:280px; min-height:600px;">
 
-          <div class="app-calendar-events-filter text-heading">
-            <div class="form-check form-check-danger mb-5 ms-2">
-              <input class="form-check-input input-filter" type="checkbox" id="select-personal" data-value="personal" checked="">
-              <label class="form-check-label" for="select-personal">Personal</label>
-            </div>
-            <div class="form-check mb-5 ms-2">
-              <input class="form-check-input input-filter" type="checkbox" id="select-business" data-value="business" checked="">
-              <label class="form-check-label" for="select-business">Business</label>
-            </div>
-            <div class="form-check form-check-warning mb-5 ms-2">
-              <input class="form-check-input input-filter" type="checkbox" id="select-family" data-value="family" checked="">
-              <label class="form-check-label" for="select-family">Family</label>
-            </div>
-            <div class="form-check form-check-success mb-5 ms-2">
-              <input class="form-check-input input-filter" type="checkbox" id="select-holiday" data-value="holiday" checked="">
-              <label class="form-check-label" for="select-holiday">Holiday</label>
-            </div>
-            <div class="form-check form-check-info ms-2">
-              <input class="form-check-input input-filter" type="checkbox" id="select-etc" data-value="etc" checked="">
-              <label class="form-check-label" for="select-etc">ETC</label>
-            </div>
+        {{-- Filter section --}}
+        <div class="p-4 border-bottom">
+          <h6 class="text-uppercase fw-bold text-muted small mb-3 letter-spacing-1">Event Filters</h6>
+
+          <div class="d-flex flex-column gap-2">
+            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-all">
+              <input class="form-check-input calendar-filter-all mt-0" type="checkbox" id="filter-all" checked>
+              <span class="fw-medium">View All</span>
+            </label>
+
+            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-followup">
+              <input class="form-check-input calendar-filter-type mt-0" type="checkbox" id="filter-followup"
+                data-type="followup" checked style="accent-color:#696cff;">
+              <span class="badge rounded-pill px-2 py-1" style="background:rgba(105,108,255,.12); color:#696cff;">
+                <i class="bx bx-phone-call me-1"></i>Follow-up
+              </span>
+            </label>
+
+            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-visit">
+              <input class="form-check-input calendar-filter-type mt-0" type="checkbox" id="filter-visit"
+                data-type="visit" checked style="accent-color:#fd7e14;">
+              <span class="badge rounded-pill px-2 py-1" style="background:rgba(253,126,20,.12); color:#fd7e14;">
+                <i class="bx bx-map-pin me-1"></i>Visit
+              </span>
+            </label>
+
+            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-gmeet">
+              <input class="form-check-input calendar-filter-type mt-0" type="checkbox" id="filter-gmeet"
+                data-type="gmeet" checked style="accent-color:#28a745;">
+              <span class="badge rounded-pill px-2 py-1" style="background:rgba(40,167,69,.12); color:#28a745;">
+                <i class="bx bx-video me-1"></i>Meeting
+              </span>
+            </label>
           </div>
         </div>
+
+        {{-- Upcoming events section --}}
+        <div class="p-4 flex-grow-1 overflow-auto">
+          <h6 class="text-uppercase fw-bold text-muted small mb-3 letter-spacing-1">Upcoming</h6>
+          <div id="upcoming-events-list">
+            <div class="text-center text-muted py-4">
+              <i class="bx bx-calendar-check fs-2 opacity-50"></i>
+              <p class="small mt-2 mb-0">Loading…</p>
+            </div>
+          </div>
+          <div id="calendar-error" class="alert alert-danger small mb-0" role="alert">
+            We could not load scheduled activities. Please refresh the page.
+          </div>
+        </div>
+
       </div>
-      <!-- /Calendar Sidebar -->
+      {{-- ===== /SIDEBAR ===== --}}
 
-      <!-- Calendar & Modal -->
+      {{-- ===== MAIN CALENDAR ===== --}}
       <div class="col app-calendar-content">
-        <div class="card shadow-none border-0">
-          <div class="card-body pb-0">
-            <!-- FullCalendar -->
-            <div id="calendar" class="fc fc-media-screen fc-direction-ltr fc-theme-standard"><div class="fc-header-toolbar fc-toolbar "><div class="fc-toolbar-chunk"><div class="fc-button-group"><button type="button" title="Sidebar" aria-pressed="false" class="fc-sidebarToggle-button fc-button d-lg-none d-inline-block ps-0" data-bs-toggle="sidebar" data-overlay="" data-target="#app-calendar-sidebar"><i class="icon-base bx bx-menu icon-lg text-heading"></i></button><button type="button" aria-pressed="false" class="fc--button fc-button fc-button-primary"></button></div><div class="fc-button-group"><button type="button" title="Previous month" aria-pressed="false" class="fc-prev-button fc-button fc-button-primary"><span class="fc-icon fc-icon-chevron-left" role="img"></span></button><button type="button" title="Next month" aria-pressed="false" class="fc-next-button fc-button fc-button-primary"><span class="fc-icon fc-icon-chevron-right" role="img"></span></button><button type="button" aria-pressed="false" class="fc--button fc-button fc-button-primary"></button></div><h2 class="fc-toolbar-title" id="fc-dom-1">August 2026</h2></div><div class="fc-toolbar-chunk"></div><div class="fc-toolbar-chunk"><div class="fc-button-group"><button type="button" title="month view" aria-pressed="true" class="fc-dayGridMonth-button fc-button fc-button-primary fc-button-active">month</button><button type="button" title="week view" aria-pressed="false" class="fc-timeGridWeek-button fc-button fc-button-primary">week</button><button type="button" title="day view" aria-pressed="false" class="fc-timeGridDay-button fc-button fc-button-primary">day</button><button type="button" title="list view" aria-pressed="false" class="fc-listMonth-button fc-button fc-button-primary">list</button></div></div></div><div aria-labelledby="fc-dom-1" class="fc-view-harness fc-view-harness-active" style="height: 276.296px;"><div class="fc-dayGridMonth-view fc-view fc-daygrid"><table role="grid" class="fc-scrollgrid  fc-scrollgrid-liquid"><thead role="rowgroup"><tr role="presentation" class="fc-scrollgrid-section fc-scrollgrid-section-header "><th role="presentation"><div class="fc-scroller-harness"><div class="fc-scroller" style="overflow: hidden;"><table role="presentation" class="fc-col-header " style="width: 372px;"><colgroup></colgroup><thead role="presentation"><tr role="row"><th role="columnheader" class="fc-col-header-cell fc-day fc-day-sun"><div class="fc-scrollgrid-sync-inner"><a aria-label="Sunday" class="fc-col-header-cell-cushion">Sun</a></div></th><th role="columnheader" class="fc-col-header-cell fc-day fc-day-mon"><div class="fc-scrollgrid-sync-inner"><a aria-label="Monday" class="fc-col-header-cell-cushion">Mon</a></div></th><th role="columnheader" class="fc-col-header-cell fc-day fc-day-tue"><div class="fc-scrollgrid-sync-inner"><a aria-label="Tuesday" class="fc-col-header-cell-cushion">Tue</a></div></th><th role="columnheader" class="fc-col-header-cell fc-day fc-day-wed"><div class="fc-scrollgrid-sync-inner"><a aria-label="Wednesday" class="fc-col-header-cell-cushion">Wed</a></div></th><th role="columnheader" class="fc-col-header-cell fc-day fc-day-thu"><div class="fc-scrollgrid-sync-inner"><a aria-label="Thursday" class="fc-col-header-cell-cushion">Thu</a></div></th><th role="columnheader" class="fc-col-header-cell fc-day fc-day-fri"><div class="fc-scrollgrid-sync-inner"><a aria-label="Friday" class="fc-col-header-cell-cushion">Fri</a></div></th><th role="columnheader" class="fc-col-header-cell fc-day fc-day-sat"><div class="fc-scrollgrid-sync-inner"><a aria-label="Saturday" class="fc-col-header-cell-cushion">Sat</a></div></th></tr></thead></table></div></div></th></tr></thead><tbody role="rowgroup"><tr role="presentation" class="fc-scrollgrid-section fc-scrollgrid-section-body  fc-scrollgrid-section-liquid"><td role="presentation"><div class="fc-scroller-harness fc-scroller-harness-liquid"><div class="fc-scroller fc-scroller-liquid-absolute" style="overflow: hidden auto;"><div class="fc-daygrid-body fc-daygrid-body-unbalanced " style="width: 372px;"><table role="presentation" class="fc-scrollgrid-sync-table" style="width: 372px; height: 610px;"><colgroup></colgroup><tbody role="presentation"><tr role="row"><td aria-labelledby="fc-dom-2" role="gridcell" data-date="2026-07-26" class="fc-day fc-day-sun fc-day-past fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to July 26, 2026" data-navlink="" tabindex="0" id="fc-dom-2" class="fc-daygrid-day-number">26</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-4" role="gridcell" data-date="2026-07-27" class="fc-day fc-day-mon fc-day-past fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to July 27, 2026" data-navlink="" tabindex="0" id="fc-dom-4" class="fc-daygrid-day-number">27</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-6" role="gridcell" data-date="2026-07-28" class="fc-day fc-day-tue fc-day-past fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to July 28, 2026" data-navlink="" tabindex="0" id="fc-dom-6" class="fc-daygrid-day-number">28</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-8" role="gridcell" data-date="2026-07-29" class="fc-day fc-day-wed fc-day-past fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to July 29, 2026" data-navlink="" tabindex="0" id="fc-dom-8" class="fc-daygrid-day-number">29</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-10" role="gridcell" data-date="2026-07-30" class="fc-day fc-day-thu fc-day-past fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to July 30, 2026" data-navlink="" tabindex="0" id="fc-dom-10" class="fc-daygrid-day-number">30</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-12" role="gridcell" data-date="2026-07-31" class="fc-day fc-day-fri fc-day-past fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to July 31, 2026" data-navlink="" tabindex="0" id="fc-dom-12" class="fc-daygrid-day-number">31</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-14" role="gridcell" data-date="2026-08-01" class="fc-day fc-day-sat fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 1, 2026" data-navlink="" tabindex="0" id="fc-dom-14" class="fc-daygrid-day-number">1</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td></tr><tr role="row"><td aria-labelledby="fc-dom-16" role="gridcell" data-date="2026-08-02" class="fc-day fc-day-sun fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 2, 2026" data-navlink="" tabindex="0" id="fc-dom-16" class="fc-daygrid-day-number">2</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-18" role="gridcell" data-date="2026-08-03" class="fc-day fc-day-mon fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 3, 2026" data-navlink="" tabindex="0" id="fc-dom-18" class="fc-daygrid-day-number">3</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-20" role="gridcell" data-date="2026-08-04" class="fc-day fc-day-tue fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 4, 2026" data-navlink="" tabindex="0" id="fc-dom-20" class="fc-daygrid-day-number">4</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-22" role="gridcell" data-date="2026-08-05" class="fc-day fc-day-wed fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 5, 2026" data-navlink="" tabindex="0" id="fc-dom-22" class="fc-daygrid-day-number">5</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-24" role="gridcell" data-date="2026-08-06" class="fc-day fc-day-thu fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 6, 2026" data-navlink="" tabindex="0" id="fc-dom-24" class="fc-daygrid-day-number">6</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-26" role="gridcell" data-date="2026-08-07" class="fc-day fc-day-fri fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 7, 2026" data-navlink="" tabindex="0" id="fc-dom-26" class="fc-daygrid-day-number">7</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-28" role="gridcell" data-date="2026-08-08" class="fc-day fc-day-sat fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 8, 2026" data-navlink="" tabindex="0" id="fc-dom-28" class="fc-daygrid-day-number">8</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td></tr><tr role="row"><td aria-labelledby="fc-dom-30" role="gridcell" data-date="2026-08-09" class="fc-day fc-day-sun fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 9, 2026" data-navlink="" tabindex="0" id="fc-dom-30" class="fc-daygrid-day-number">9</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-32" role="gridcell" data-date="2026-08-10" class="fc-day fc-day-mon fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 10, 2026" data-navlink="" tabindex="0" id="fc-dom-32" class="fc-daygrid-day-number">10</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-34" role="gridcell" data-date="2026-08-11" class="fc-day fc-day-tue fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 11, 2026" data-navlink="" tabindex="0" id="fc-dom-34" class="fc-daygrid-day-number">11</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-36" role="gridcell" data-date="2026-08-12" class="fc-day fc-day-wed fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 12, 2026" data-navlink="" tabindex="0" id="fc-dom-36" class="fc-daygrid-day-number">12</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-38" role="gridcell" data-date="2026-08-13" class="fc-day fc-day-thu fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 13, 2026" data-navlink="" tabindex="0" id="fc-dom-38" class="fc-daygrid-day-number">13</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-40" role="gridcell" data-date="2026-08-14" class="fc-day fc-day-fri fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 14, 2026" data-navlink="" tabindex="0" id="fc-dom-40" class="fc-daygrid-day-number">14</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-42" role="gridcell" data-date="2026-08-15" class="fc-day fc-day-sat fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 15, 2026" data-navlink="" tabindex="0" id="fc-dom-42" class="fc-daygrid-day-number">15</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td></tr><tr role="row"><td aria-labelledby="fc-dom-44" role="gridcell" data-date="2026-08-16" class="fc-day fc-day-sun fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 16, 2026" data-navlink="" tabindex="0" id="fc-dom-44" class="fc-daygrid-day-number">16</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-46" role="gridcell" data-date="2026-08-17" class="fc-day fc-day-mon fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 17, 2026" data-navlink="" tabindex="0" id="fc-dom-46" class="fc-daygrid-day-number">17</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-48" role="gridcell" data-date="2026-08-18" class="fc-day fc-day-tue fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 18, 2026" data-navlink="" tabindex="0" id="fc-dom-48" class="fc-daygrid-day-number">18</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-event-harness" style="margin-top: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-end fc-event-past fc-daygrid-event fc-daygrid-dot-event bg-label-warning"><div class="fc-daygrid-event-dot"></div><div class="fc-event-time">12a</div><div class="fc-event-title">Dinner</div></a></div><div class="fc-daygrid-event-harness" style="margin-top: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-end fc-event-past fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-info"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Dart Game?</div></div></div></div><div class="fc-event-resizer fc-event-resizer-start"></div><div class="fc-event-resizer fc-event-resizer-end"></div></a></div><div class="fc-daygrid-event-harness fc-daygrid-event-harness-abs" style="visibility: hidden; top: 0px; left: 0px; right: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-end fc-event-past fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-danger"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Meditation</div></div></div></div><div class="fc-event-resizer fc-event-resizer-start"></div><div class="fc-event-resizer fc-event-resizer-end"></div></a></div><div class="fc-daygrid-event-harness fc-daygrid-event-harness-abs" style="visibility: hidden; top: 0px; left: 0px; right: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-end fc-event-past fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-primary"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Product Review</div></div></div></div><div class="fc-event-resizer fc-event-resizer-start"></div><div class="fc-event-resizer fc-event-resizer-end"></div></a></div><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"><a tabindex="0" title="Show 2 more events" aria-expanded="false" aria-controls="" class="fc-daygrid-more-link fc-more-link">+2 more</a></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-50" role="gridcell" data-date="2026-08-19" class="fc-day fc-day-wed fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 19, 2026" data-navlink="" tabindex="0" id="fc-dom-50" class="fc-daygrid-day-number">19</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-52" role="gridcell" data-date="2026-08-20" class="fc-day fc-day-thu fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 20, 2026" data-navlink="" tabindex="0" id="fc-dom-52" class="fc-daygrid-day-number">20</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-event-harness" style="margin-top: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-end fc-event-past fc-daygrid-event fc-daygrid-dot-event bg-label-danger"><div class="fc-daygrid-event-dot"></div><div class="fc-event-time">12a</div><div class="fc-event-title">Doctor's Appointment</div></a></div><div class="fc-daygrid-event-harness" style="margin-top: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-end fc-event-past fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-primary"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Meeting With Client</div></div></div></div><div class="fc-event-resizer fc-event-resizer-start"></div><div class="fc-event-resizer fc-event-resizer-end"></div></a></div><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-54" role="gridcell" data-date="2026-08-21" class="fc-day fc-day-fri fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 21, 2026" data-navlink="" tabindex="0" id="fc-dom-54" class="fc-daygrid-day-number">21</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-56" role="gridcell" data-date="2026-08-22" class="fc-day fc-day-sat fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 22, 2026" data-navlink="" tabindex="0" id="fc-dom-56" class="fc-daygrid-day-number">22</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-event-harness" style="margin-top: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-past fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-success"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Family Trip</div></div></div></div><div class="fc-event-resizer fc-event-resizer-start"></div></a></div><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td></tr><tr role="row"><td aria-labelledby="fc-dom-58" role="gridcell" data-date="2026-08-23" class="fc-day fc-day-sun fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 23, 2026" data-navlink="" tabindex="0" id="fc-dom-58" class="fc-daygrid-day-number">23</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-event-harness" style="margin-top: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-end fc-event-past fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-success"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Family Trip</div></div></div></div><div class="fc-event-resizer fc-event-resizer-end"></div></a></div><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-60" role="gridcell" data-date="2026-08-24" class="fc-day fc-day-mon fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 24, 2026" data-navlink="" tabindex="0" id="fc-dom-60" class="fc-daygrid-day-number">24</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-62" role="gridcell" data-date="2026-08-25" class="fc-day fc-day-tue fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 25, 2026" data-navlink="" tabindex="0" id="fc-dom-62" class="fc-daygrid-day-number">25</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-64" role="gridcell" data-date="2026-08-26" class="fc-day fc-day-wed fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 26, 2026" data-navlink="" tabindex="0" id="fc-dom-64" class="fc-daygrid-day-number">26</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-66" role="gridcell" data-date="2026-08-27" class="fc-day fc-day-thu fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 27, 2026" data-navlink="" tabindex="0" id="fc-dom-66" class="fc-daygrid-day-number">27</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-68" role="gridcell" data-date="2026-08-28" class="fc-day fc-day-fri fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 28, 2026" data-navlink="" tabindex="0" id="fc-dom-68" class="fc-daygrid-day-number">28</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-70" role="gridcell" data-date="2026-08-29" class="fc-day fc-day-sat fc-day-past fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 29, 2026" data-navlink="" tabindex="0" id="fc-dom-70" class="fc-daygrid-day-number">29</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td></tr><tr role="row"><td aria-labelledby="fc-dom-72" role="gridcell" data-date="2026-08-30" class="fc-day fc-day-sun fc-day-today fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 30, 2026" data-navlink="" tabindex="0" id="fc-dom-72" class="fc-daygrid-day-number">30</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-event-harness fc-daygrid-event-harness-abs" style="top: 0px; left: 0px; right: -53.1375px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-start fc-event-end fc-event-today fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-primary"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-time">10:26p</div><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Design Review</div></div></div></div></a></div><div class="fc-daygrid-day-bottom" style="margin-top: 39px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-74" role="gridcell" data-date="2026-08-31" class="fc-day fc-day-mon fc-day-future fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to August 31, 2026" data-navlink="" tabindex="0" id="fc-dom-74" class="fc-daygrid-day-number">31</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 39px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-76" role="gridcell" data-date="2026-09-01" class="fc-day fc-day-tue fc-day-future fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to September 1, 2026" data-navlink="" tabindex="0" id="fc-dom-76" class="fc-daygrid-day-number">1</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-event-harness" style="margin-top: 0px;"><a tabindex="0" class="fc-event fc-event-draggable fc-event-resizable fc-event-start fc-event-end fc-event-future fc-daygrid-event fc-daygrid-block-event fc-h-event bg-label-primary"><div class="fc-event-main"><div class="fc-event-main-frame"><div class="fc-event-title-container"><div class="fc-event-title fc-sticky">Monthly Meeting</div></div></div></div><div class="fc-event-resizer fc-event-resizer-start"></div><div class="fc-event-resizer fc-event-resizer-end"></div></a></div><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-78" role="gridcell" data-date="2026-09-02" class="fc-day fc-day-wed fc-day-future fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to September 2, 2026" data-navlink="" tabindex="0" id="fc-dom-78" class="fc-daygrid-day-number">2</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-80" role="gridcell" data-date="2026-09-03" class="fc-day fc-day-thu fc-day-future fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to September 3, 2026" data-navlink="" tabindex="0" id="fc-dom-80" class="fc-daygrid-day-number">3</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-82" role="gridcell" data-date="2026-09-04" class="fc-day fc-day-fri fc-day-future fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to September 4, 2026" data-navlink="" tabindex="0" id="fc-dom-82" class="fc-daygrid-day-number">4</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td><td aria-labelledby="fc-dom-84" role="gridcell" data-date="2026-09-05" class="fc-day fc-day-sat fc-day-future fc-day-other fc-daygrid-day"><div class="fc-daygrid-day-frame fc-scrollgrid-sync-inner"><div class="fc-daygrid-day-top"><a title="Go to September 5, 2026" data-navlink="" tabindex="0" id="fc-dom-84" class="fc-daygrid-day-number">5</a></div><div class="fc-daygrid-day-events"><div class="fc-daygrid-day-bottom" style="margin-top: 0px;"></div></div><div class="fc-daygrid-day-bg"></div></div></td></tr></tbody></table></div></div></div></td></tr></tbody></table></div></div></div>
-          </div>
-        </div>
-        <div class="app-overlay"></div>
-        <!-- FullCalendar Offcanvas -->
-        <div class="offcanvas offcanvas-end event-sidebar" tabindex="-1" id="addEventSidebar" aria-labelledby="addEventSidebarLabel">
-          <div class="offcanvas-header border-bottom">
-            <h5 class="offcanvas-title" id="addEventSidebarLabel">Add Event</h5>
-            <button type="button" class="btn-close text-reset" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-          </div>
-          <div class="offcanvas-body">
-            <form class="event-form pt-0 fv-plugins-bootstrap5 fv-plugins-framework" id="eventForm" onsubmit="return false" novalidate="novalidate">
-              <div class="mb-6 form-control-validation fv-plugins-icon-container">
-                <label class="form-label" for="eventTitle">Title</label>
-                <input type="text" class="form-control" id="eventTitle" name="eventTitle" placeholder="Event Title">
-              <div class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback"></div></div>
-              <div class="mb-6">
-                <label class="form-label" for="eventLabel">Label</label>
-                <div class="position-relative"><select class="select2 select-event-label form-select select2-hidden-accessible" id="eventLabel" name="eventLabel" data-select2-id="eventLabel" tabindex="-1" aria-hidden="true">
-                  <option data-label="primary" value="Business" selected="" data-select2-id="2">Business</option>
-                  <option data-label="danger" value="Personal">Personal</option>
-                  <option data-label="warning" value="Family">Family</option>
-                  <option data-label="success" value="Holiday">Holiday</option>
-                  <option data-label="info" value="ETC">ETC</option>
-                </select><span class="select2 select2-container select2-container--default" dir="ltr" data-select2-id="1" style="width: 336.8px;"><span class="selection"><span class="select2-selection select2-selection--single" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="0" aria-disabled="false" aria-labelledby="select2-eventLabel-container"><span class="select2-selection__rendered" id="select2-eventLabel-container" role="textbox" aria-readonly="true" title="Business"><span class="badge badge-dot bg-primary me-2"> </span>Business</span><span class="select2-selection__arrow" role="presentation"><b role="presentation"></b></span></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span></div>
-              </div>
-              <div class="mb-6 form-control-validation fv-plugins-icon-container">
-                <label class="form-label" for="eventStartDate">Start Date</label>
-                <div class="flatpickr-wrapper"><input type="text" class="form-control flatpickr-input" id="eventStartDate" name="eventStartDate" placeholder="Start Date" readonly="readonly"><div class="flatpickr-calendar hasTime animate static" tabindex="-1"><div class="flatpickr-months"><span class="flatpickr-prev-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M5.207 8.471l7.146 7.147-0.707 0.707-7.853-7.854 7.854-7.853 0.707 0.707-7.147 7.146z"></path></svg></span><div class="flatpickr-month"><div class="flatpickr-current-month"><span class="cur-month">August </span><div class="numInputWrapper"><input class="numInput cur-year" type="number" tabindex="-1" aria-label="Year"><span class="arrowUp"></span><span class="arrowDown"></span></div></div></div><span class="flatpickr-next-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M13.207 8.472l-7.854 7.854-0.707-0.707 7.146-7.146-7.146-7.148 0.707-0.707 7.854 7.854z"></path></svg></span></div><div class="flatpickr-innerContainer"><div class="flatpickr-rContainer"><div class="flatpickr-weekdays"><div class="flatpickr-weekdaycontainer">
-      <span class="flatpickr-weekday">
-        Sun</span><span class="flatpickr-weekday">Mon</span><span class="flatpickr-weekday">Tue</span><span class="flatpickr-weekday">Wed</span><span class="flatpickr-weekday">Thu</span><span class="flatpickr-weekday">Fri</span><span class="flatpickr-weekday">Sat
-      </span>
-      </div></div><div class="flatpickr-days" tabindex="-1"><div class="dayContainer"><span class="flatpickr-day prevMonthDay" aria-label="July 26, 2026" tabindex="-1">26</span><span class="flatpickr-day prevMonthDay" aria-label="July 27, 2026" tabindex="-1">27</span><span class="flatpickr-day prevMonthDay" aria-label="July 28, 2026" tabindex="-1">28</span><span class="flatpickr-day prevMonthDay" aria-label="July 29, 2026" tabindex="-1">29</span><span class="flatpickr-day prevMonthDay" aria-label="July 30, 2026" tabindex="-1">30</span><span class="flatpickr-day prevMonthDay" aria-label="July 31, 2026" tabindex="-1">31</span><span class="flatpickr-day" aria-label="August 1, 2026" tabindex="-1">1</span><span class="flatpickr-day" aria-label="August 2, 2026" tabindex="-1">2</span><span class="flatpickr-day" aria-label="August 3, 2026" tabindex="-1">3</span><span class="flatpickr-day" aria-label="August 4, 2026" tabindex="-1">4</span><span class="flatpickr-day" aria-label="August 5, 2026" tabindex="-1">5</span><span class="flatpickr-day" aria-label="August 6, 2026" tabindex="-1">6</span><span class="flatpickr-day" aria-label="August 7, 2026" tabindex="-1">7</span><span class="flatpickr-day" aria-label="August 8, 2026" tabindex="-1">8</span><span class="flatpickr-day" aria-label="August 9, 2026" tabindex="-1">9</span><span class="flatpickr-day" aria-label="August 10, 2026" tabindex="-1">10</span><span class="flatpickr-day" aria-label="August 11, 2026" tabindex="-1">11</span><span class="flatpickr-day" aria-label="August 12, 2026" tabindex="-1">12</span><span class="flatpickr-day" aria-label="August 13, 2026" tabindex="-1">13</span><span class="flatpickr-day" aria-label="August 14, 2026" tabindex="-1">14</span><span class="flatpickr-day" aria-label="August 15, 2026" tabindex="-1">15</span><span class="flatpickr-day" aria-label="August 16, 2026" tabindex="-1">16</span><span class="flatpickr-day" aria-label="August 17, 2026" tabindex="-1">17</span><span class="flatpickr-day" aria-label="August 18, 2026" tabindex="-1">18</span><span class="flatpickr-day" aria-label="August 19, 2026" tabindex="-1">19</span><span class="flatpickr-day" aria-label="August 20, 2026" tabindex="-1">20</span><span class="flatpickr-day" aria-label="August 21, 2026" tabindex="-1">21</span><span class="flatpickr-day" aria-label="August 22, 2026" tabindex="-1">22</span><span class="flatpickr-day" aria-label="August 23, 2026" tabindex="-1">23</span><span class="flatpickr-day" aria-label="August 24, 2026" tabindex="-1">24</span><span class="flatpickr-day" aria-label="August 25, 2026" tabindex="-1">25</span><span class="flatpickr-day" aria-label="August 26, 2026" tabindex="-1">26</span><span class="flatpickr-day" aria-label="August 27, 2026" tabindex="-1">27</span><span class="flatpickr-day" aria-label="August 28, 2026" tabindex="-1">28</span><span class="flatpickr-day" aria-label="August 29, 2026" tabindex="-1">29</span><span class="flatpickr-day today" aria-label="August 30, 2026" aria-current="date" tabindex="-1">30</span><span class="flatpickr-day" aria-label="August 31, 2026" tabindex="-1">31</span><span class="flatpickr-day nextMonthDay" aria-label="September 1, 2026" tabindex="-1">1</span><span class="flatpickr-day nextMonthDay" aria-label="September 2, 2026" tabindex="-1">2</span><span class="flatpickr-day nextMonthDay" aria-label="September 3, 2026" tabindex="-1">3</span><span class="flatpickr-day nextMonthDay" aria-label="September 4, 2026" tabindex="-1">4</span><span class="flatpickr-day nextMonthDay" aria-label="September 5, 2026" tabindex="-1">5</span></div></div></div></div><div class="flatpickr-time" tabindex="-1"><div class="numInputWrapper"><input class="numInput flatpickr-hour" type="number" aria-label="Hour" tabindex="-1" step="1" min="1" max="12" maxlength="2"><span class="arrowUp"></span><span class="arrowDown"></span></div><span class="flatpickr-time-separator">:</span><div class="numInputWrapper"><input class="numInput flatpickr-minute" type="number" aria-label="Minute" tabindex="-1" step="5" min="0" max="59" maxlength="2"><span class="arrowUp"></span><span class="arrowDown"></span></div><span class="flatpickr-am-pm" title="Click to toggle" tabindex="-1">PM</span></div></div></div>
-              <div class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback"></div></div>
-              <div class="mb-6 form-control-validation fv-plugins-icon-container">
-                <label class="form-label" for="eventEndDate">End Date</label>
-                <div class="flatpickr-wrapper"><input type="text" class="form-control flatpickr-input" id="eventEndDate" name="eventEndDate" placeholder="End Date" readonly="readonly"><div class="flatpickr-calendar hasTime animate static" tabindex="-1"><div class="flatpickr-months"><span class="flatpickr-prev-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M5.207 8.471l7.146 7.147-0.707 0.707-7.853-7.854 7.854-7.853 0.707 0.707-7.147 7.146z"></path></svg></span><div class="flatpickr-month"><div class="flatpickr-current-month"><span class="cur-month">August </span><div class="numInputWrapper"><input class="numInput cur-year" type="number" tabindex="-1" aria-label="Year"><span class="arrowUp"></span><span class="arrowDown"></span></div></div></div><span class="flatpickr-next-month"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 17 17"><g></g><path d="M13.207 8.472l-7.854 7.854-0.707-0.707 7.146-7.146-7.146-7.148 0.707-0.707 7.854 7.854z"></path></svg></span></div><div class="flatpickr-innerContainer"><div class="flatpickr-rContainer"><div class="flatpickr-weekdays"><div class="flatpickr-weekdaycontainer">
-      <span class="flatpickr-weekday">
-        Sun</span><span class="flatpickr-weekday">Mon</span><span class="flatpickr-weekday">Tue</span><span class="flatpickr-weekday">Wed</span><span class="flatpickr-weekday">Thu</span><span class="flatpickr-weekday">Fri</span><span class="flatpickr-weekday">Sat
-      </span>
-      </div></div><div class="flatpickr-days" tabindex="-1"><div class="dayContainer"><span class="flatpickr-day prevMonthDay" aria-label="July 26, 2026" tabindex="-1">26</span><span class="flatpickr-day prevMonthDay" aria-label="July 27, 2026" tabindex="-1">27</span><span class="flatpickr-day prevMonthDay" aria-label="July 28, 2026" tabindex="-1">28</span><span class="flatpickr-day prevMonthDay" aria-label="July 29, 2026" tabindex="-1">29</span><span class="flatpickr-day prevMonthDay" aria-label="July 30, 2026" tabindex="-1">30</span><span class="flatpickr-day prevMonthDay" aria-label="July 31, 2026" tabindex="-1">31</span><span class="flatpickr-day" aria-label="August 1, 2026" tabindex="-1">1</span><span class="flatpickr-day" aria-label="August 2, 2026" tabindex="-1">2</span><span class="flatpickr-day" aria-label="August 3, 2026" tabindex="-1">3</span><span class="flatpickr-day" aria-label="August 4, 2026" tabindex="-1">4</span><span class="flatpickr-day" aria-label="August 5, 2026" tabindex="-1">5</span><span class="flatpickr-day" aria-label="August 6, 2026" tabindex="-1">6</span><span class="flatpickr-day" aria-label="August 7, 2026" tabindex="-1">7</span><span class="flatpickr-day" aria-label="August 8, 2026" tabindex="-1">8</span><span class="flatpickr-day" aria-label="August 9, 2026" tabindex="-1">9</span><span class="flatpickr-day" aria-label="August 10, 2026" tabindex="-1">10</span><span class="flatpickr-day" aria-label="August 11, 2026" tabindex="-1">11</span><span class="flatpickr-day" aria-label="August 12, 2026" tabindex="-1">12</span><span class="flatpickr-day" aria-label="August 13, 2026" tabindex="-1">13</span><span class="flatpickr-day" aria-label="August 14, 2026" tabindex="-1">14</span><span class="flatpickr-day" aria-label="August 15, 2026" tabindex="-1">15</span><span class="flatpickr-day" aria-label="August 16, 2026" tabindex="-1">16</span><span class="flatpickr-day" aria-label="August 17, 2026" tabindex="-1">17</span><span class="flatpickr-day" aria-label="August 18, 2026" tabindex="-1">18</span><span class="flatpickr-day" aria-label="August 19, 2026" tabindex="-1">19</span><span class="flatpickr-day" aria-label="August 20, 2026" tabindex="-1">20</span><span class="flatpickr-day" aria-label="August 21, 2026" tabindex="-1">21</span><span class="flatpickr-day" aria-label="August 22, 2026" tabindex="-1">22</span><span class="flatpickr-day" aria-label="August 23, 2026" tabindex="-1">23</span><span class="flatpickr-day" aria-label="August 24, 2026" tabindex="-1">24</span><span class="flatpickr-day" aria-label="August 25, 2026" tabindex="-1">25</span><span class="flatpickr-day" aria-label="August 26, 2026" tabindex="-1">26</span><span class="flatpickr-day" aria-label="August 27, 2026" tabindex="-1">27</span><span class="flatpickr-day" aria-label="August 28, 2026" tabindex="-1">28</span><span class="flatpickr-day" aria-label="August 29, 2026" tabindex="-1">29</span><span class="flatpickr-day today" aria-label="August 30, 2026" aria-current="date" tabindex="-1">30</span><span class="flatpickr-day" aria-label="August 31, 2026" tabindex="-1">31</span><span class="flatpickr-day nextMonthDay" aria-label="September 1, 2026" tabindex="-1">1</span><span class="flatpickr-day nextMonthDay" aria-label="September 2, 2026" tabindex="-1">2</span><span class="flatpickr-day nextMonthDay" aria-label="September 3, 2026" tabindex="-1">3</span><span class="flatpickr-day nextMonthDay" aria-label="September 4, 2026" tabindex="-1">4</span><span class="flatpickr-day nextMonthDay" aria-label="September 5, 2026" tabindex="-1">5</span></div></div></div></div><div class="flatpickr-time" tabindex="-1"><div class="numInputWrapper"><input class="numInput flatpickr-hour" type="number" aria-label="Hour" tabindex="-1" step="1" min="1" max="12" maxlength="2"><span class="arrowUp"></span><span class="arrowDown"></span></div><span class="flatpickr-time-separator">:</span><div class="numInputWrapper"><input class="numInput flatpickr-minute" type="number" aria-label="Minute" tabindex="-1" step="5" min="0" max="59" maxlength="2"><span class="arrowUp"></span><span class="arrowDown"></span></div><span class="flatpickr-am-pm" title="Click to toggle" tabindex="-1">PM</span></div></div></div>
-              <div class="fv-plugins-message-container fv-plugins-message-container--enabled invalid-feedback"></div></div>
-              <div class="mb-6">
-                <div class="form-check form-switch">
-                  <input type="checkbox" class="form-check-input allDay-switch" id="allDaySwitch">
-                  <label class="form-check-label" for="allDaySwitch">All Day</label>
-                </div>
-              </div>
-              <div class="mb-6">
-                <label class="form-label" for="eventURL">Event URL</label>
-                <input type="url" class="form-control" id="eventURL" name="eventURL" placeholder="https://www.google.com">
-              </div>
-              <div class="mb-4 select2-primary">
-                <label class="form-label" for="eventGuests">Add Guests</label>
-                <div class="position-relative"><select class="select2 select-event-guests form-select select2-hidden-accessible" id="eventGuests" name="eventGuests" multiple="" data-select2-id="eventGuests" tabindex="-1" aria-hidden="true">
-                  <option data-avatar="1.png" value="Jane Foster">Jane Foster</option>
-                  <option data-avatar="3.png" value="Donna Frank">Donna Frank</option>
-                  <option data-avatar="5.png" value="Gabrielle Robertson">Gabrielle Robertson</option>
-                  <option data-avatar="7.png" value="Lori Spears">Lori Spears</option>
-                  <option data-avatar="9.png" value="Sandy Vega">Sandy Vega</option>
-                  <option data-avatar="11.png" value="Cheryl May">Cheryl May</option>
-                </select><span class="select2 select2-container select2-container--default" dir="ltr" data-select2-id="3" style="width: 336.8px;"><span class="selection"><span class="select2-selection select2-selection--multiple" role="combobox" aria-haspopup="true" aria-expanded="false" tabindex="-1" aria-disabled="false"><ul class="select2-selection__rendered"><li class="select2-search select2-search--inline"><input class="select2-search__field" type="search" tabindex="0" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false" role="searchbox" aria-autocomplete="list" placeholder="Select value" style="width: 325.2px;"></li></ul></span></span><span class="dropdown-wrapper" aria-hidden="true"></span></span></div>
-              </div>
-              <div class="mb-6">
-                <label class="form-label" for="eventLocation">Location</label>
-                <input type="text" class="form-control" id="eventLocation" name="eventLocation" placeholder="Enter Location">
-              </div>
-              <div class="mb-6">
-                <label class="form-label" for="eventDescription">Description</label>
-                <textarea class="form-control" name="eventDescription" id="eventDescription"></textarea>
-              </div>
-              <div class="d-flex justify-content-sm-between justify-content-start mt-6 gap-2">
-                <div class="d-flex">
-                  <button type="submit" id="addEventBtn" class="btn btn-primary btn-add-event me-4">Add</button>
-                  <button type="reset" class="btn btn-label-secondary btn-cancel me-sm-0 me-1" data-bs-dismiss="offcanvas">Cancel</button>
-                </div>
-                <button class="btn btn-label-danger btn-delete-event d-none">Delete</button>
-              </div>
-            <input type="hidden"></form>
+        <div class="card shadow-none border-0 h-100">
+          <div class="card-body p-4">
+            <div id="calendar"></div>
           </div>
         </div>
       </div>
-      <!-- /Calendar & Modal -->
+      {{-- ===== /MAIN CALENDAR ===== --}}
+
+    </div>
+  </div>
+
+</div>
+
+{{-- ===== EVENT DETAIL MODAL ===== --}}
+<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-labelledby="eventDetailModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header border-0 pb-0" id="eventDetailHeader">
+        <div>
+          <span class="badge rounded-pill mb-2 fs-6" id="modal-type-badge"></span>
+          <h5 class="modal-title fw-bold mb-0" id="eventDetailModalLabel" style="font-size:1.1rem;"></h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body pt-3">
+        <div class="row g-3">
+          <div class="col-6">
+            <div class="small text-muted fw-semibold mb-1">LEAD</div>
+            <div class="fw-medium" id="modal-lead-name">—</div>
+          </div>
+          <div class="col-6">
+            <div class="small text-muted fw-semibold mb-1">STATUS</div>
+            <span class="badge" id="modal-status-badge">—</span>
+          </div>
+          <div class="col-12">
+            <div class="small text-muted fw-semibold mb-1">SCHEDULED AT</div>
+            <div class="fw-medium" id="modal-scheduled-at">—</div>
+          </div>
+          <div class="col-12" id="modal-subject-row">
+            <div class="small text-muted fw-semibold mb-1">SUBJECT</div>
+            <div id="modal-subject">—</div>
+          </div>
+          <div class="col-12" id="modal-summary-row" style="display:none;">
+            <div class="small text-muted fw-semibold mb-1">NOTES</div>
+            <div class="text-muted small" id="modal-summary">—</div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <a href="#" class="btn btn-primary btn-sm" id="modal-lead-link" target="_blank">
+          <i class="bx bx-link-external me-1"></i>View Lead
+        </a>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+      </div>
     </div>
   </div>
 </div>
+{{-- ===== /EVENT DETAIL MODAL ===== --}}
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
+<script>
+(function () {
+  'use strict';
+
+  // ------------------------------------------------------------------
+  // Helpers
+  // ------------------------------------------------------------------
+  const typeColors = {
+    followup: { bg: '#696cff', text: '#fff', label: 'Follow-up', icon: 'bx-phone-call' },
+    visit:    { bg: '#fd7e14', text: '#fff', label: 'Visit',     icon: 'bx-map-pin' },
+    gmeet:    { bg: '#28a745', text: '#fff', label: 'Meeting',   icon: 'bx-video' },
+  };
+
+  const statusBadge = {
+    pending:   'bg-label-warning',
+    completed: 'bg-label-success',
+    cancelled: 'bg-label-secondary',
+    missed:    'bg-label-danger',
+  };
+
+  function formatDt(isoStr) {
+    if (!isoStr) return '—';
+    const d = new Date(isoStr);
+    return d.toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Track which types are visible
+  // ------------------------------------------------------------------
+  const visibleTypes = new Set(['followup', 'visit', 'gmeet']);
+  let calendarInstance = null;
+
+  // ------------------------------------------------------------------
+  // Upcoming events list
+  // ------------------------------------------------------------------
+  function updateStats(events) {
+    ['followup', 'visit', 'gmeet'].forEach(type => {
+      const count = events.filter(event => event.extendedProps.activityType === type).length;
+      document.getElementById(`stat-${type}`).textContent = count;
+    });
+  }
+
+  function showCalendarError(show) {
+    document.getElementById('calendar-error').style.display = show ? '' : 'none';
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '').replace(/[&<>'"]/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;',
+    })[character]);
+  }
+
+  async function loadUpcoming() {
+    const now = new Date().toISOString();
+    const future = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(); // next 60 days
+    try {
+      const res = await fetch(`{{ route('calendar.events') }}?start=${now}&end=${future}`);
+      if (!res.ok) throw new Error(`Calendar request failed with ${res.status}`);
+      const events = await res.json();
+      updateStats(events);
+      renderUpcoming(events.filter(e => visibleTypes.has(e.extendedProps.activityType)).slice(0, 6));
+      showCalendarError(false);
+    } catch (e) {
+      console.error('Upcoming load failed', e);
+      showCalendarError(true);
+    }
+  }
+
+  function renderUpcoming(events) {
+    const list = document.getElementById('upcoming-events-list');
+    if (!events.length) {
+      list.innerHTML = `<div class="text-center text-muted py-4">
+        <i class="bx bx-calendar-x fs-2 opacity-50"></i>
+        <p class="small mt-2 mb-0">No upcoming events</p>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = events.map(ev => {
+      const p = ev.extendedProps;
+      const c = typeColors[p.activityType] || { bg: '#8592a3', text: '#fff', label: 'Activity', icon: 'bx-calendar' };
+      const date = new Date(p.scheduledAt);
+      const dayNum = date.toLocaleDateString('en-IN', { day: '2-digit' });
+      const mon = date.toLocaleDateString('en-IN', { month: 'short' });
+      const time = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+      return `
+        <div class="d-flex align-items-start gap-3 mb-3 pb-3 border-bottom upcoming-event-item"
+             data-event-id="${ev.id}" style="cursor:pointer;" title="Click to view">
+          <div class="rounded-3 d-flex flex-column align-items-center justify-content-center flex-shrink-0"
+               style="width:40px;height:44px;background:${c.bg}20; border-left:3px solid ${c.bg};">
+            <span class="fw-bold lh-1" style="font-size:.8rem; color:${c.bg};">${dayNum}</span>
+            <span class="text-uppercase lh-1" style="font-size:.6rem; color:${c.bg};">${mon}</span>
+          </div>
+          <div class="overflow-hidden">
+            <div class="fw-medium text-truncate small">${escapeHtml(p.leadName)}</div>
+            <div class="text-muted" style="font-size:.7rem;">
+              <i class="bx ${c.icon} me-1"></i>${escapeHtml(c.label)} · ${escapeHtml(time)}
+            </div>
+          </div>
+        </div>`;
+    }).join('');
+
+    // Clicking upcoming item → jump calendar & open modal
+    list.querySelectorAll('.upcoming-event-item').forEach(item => {
+      item.addEventListener('click', () => {
+        const id = parseInt(item.dataset.eventId);
+        if (calendarInstance) {
+          const ev = calendarInstance.getEventById(id);
+          if (ev) {
+            calendarInstance.gotoDate(ev.start);
+            openModal(ev);
+          }
+        }
+      });
+    });
+  }
+
+  // ------------------------------------------------------------------
+  // Event detail modal
+  // ------------------------------------------------------------------
+  let bsModal = null;
+
+  function openModal(event) {
+    const p = event.extendedProps;
+    const c = typeColors[p.activityType] || { bg: '#8592a3', text: '#fff', label: ucfirst(p.activityType), icon: 'bx-calendar' };
+
+    // Header
+    document.getElementById('eventDetailHeader').style.borderBottom = `3px solid ${c.bg}`;
+    const typeBadge = document.getElementById('modal-type-badge');
+    typeBadge.style.background = c.bg + '20';
+    typeBadge.style.color = c.bg;
+    typeBadge.innerHTML = `<i class="bx ${c.icon} me-1"></i>${c.label}`;
+
+    document.getElementById('eventDetailModalLabel').textContent = p.subject || event.title;
+
+    // Fields
+    document.getElementById('modal-lead-name').textContent = p.leadName;
+    document.getElementById('modal-scheduled-at').textContent = formatDt(p.scheduledAt);
+
+    const statusEl = document.getElementById('modal-status-badge');
+    statusEl.className = 'badge ' + (statusBadge[p.status] || 'bg-label-secondary');
+    statusEl.textContent = ucfirst(p.status || '—');
+
+    const subjectEl = document.getElementById('modal-subject');
+    subjectEl.textContent = p.subject || '—';
+
+    const summaryRow = document.getElementById('modal-summary-row');
+    if (p.summary) {
+      summaryRow.style.display = '';
+      document.getElementById('modal-summary').textContent = p.summary;
+    } else {
+      summaryRow.style.display = 'none';
+    }
+
+    // Lead link
+    const leadLink = document.getElementById('modal-lead-link');
+    leadLink.href = p.leadId
+      ? `{{ url('sales/lead-view') }}/${p.leadId}`
+      : '#';
+
+    if (!bsModal) {
+      bsModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
+    }
+    bsModal.show();
+  }
+
+  function ucfirst(str) {
+    if (!str) return '';
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  // ------------------------------------------------------------------
+  // FullCalendar initialisation
+  // ------------------------------------------------------------------
+  document.addEventListener('DOMContentLoaded', function () {
+    const calendarEl = document.getElementById('calendar');
+
+    calendarInstance = new FullCalendar.Calendar(calendarEl, {
+      plugins: ['dayGrid', 'timeGrid', 'list', 'interaction'],
+      initialView: 'dayGridMonth',
+      headerToolbar: {
+        left:   'prev,next today',
+        center: 'title',
+        right:  'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
+      },
+      height: 'auto',
+      events: {
+        url: '{{ route("calendar.events") }}',
+        method: 'GET',
+        failure: function () {
+          console.error('Failed to load calendar events.');
+          showCalendarError(true);
+        },
+      },
+
+      // Filter on client after fetch
+      eventDisplay: 'block',
+
+      eventDidMount: function (info) {
+        const type = info.event.extendedProps.activityType;
+        if (!visibleTypes.has(type)) {
+          info.el.style.display = 'none';
+        }
+      },
+
+      eventClick: function (info) {
+        openModal(info.event);
+      },
+
+      eventMouseEnter: function (info) {
+        info.el.style.transform = 'scale(1.02)';
+        info.el.style.transition = 'transform .15s ease';
+        info.el.style.zIndex = '9';
+      },
+
+      eventMouseLeave: function (info) {
+        info.el.style.transform = '';
+      },
+
+      noEventsContent: 'No scheduled activities for this period.',
+
+      loading: function (isLoading) {
+        if (isLoading) showCalendarError(false);
+      },
+    });
+
+    calendarInstance.render();
+
+    // ------------------------------------------------------------------
+    // Filter checkboxes
+    // ------------------------------------------------------------------
+    const filterAll  = document.getElementById('filter-all');
+    const typeChecks = document.querySelectorAll('.calendar-filter-type');
+
+    function applyFilters() {
+      // Rebuild visibleTypes
+      visibleTypes.clear();
+      typeChecks.forEach(cb => {
+        if (cb.checked) visibleTypes.add(cb.dataset.type);
+      });
+
+      // Show/hide rendered events
+      calendarInstance.getEvents().forEach(ev => {
+        const type = ev.extendedProps.activityType;
+        const els  = calendarInstance.el.querySelectorAll(`[data-event-id="${ev.id}"]`);
+        // FullCalendar doesn't expose per-element hide easily, use classlist trick
+        ev.setProp('display', visibleTypes.has(type) ? 'block' : 'none');
+      });
+
+      // Sync "View All" state
+      const allChecked = [...typeChecks].every(cb => cb.checked);
+      const noneChecked = [...typeChecks].every(cb => !cb.checked);
+      filterAll.indeterminate = !allChecked && !noneChecked;
+      filterAll.checked = allChecked;
+
+      loadUpcoming();
+    }
+
+    filterAll.addEventListener('change', function () {
+      typeChecks.forEach(cb => { cb.checked = this.checked; });
+      applyFilters();
+    });
+
+    typeChecks.forEach(cb => {
+      cb.addEventListener('change', applyFilters);
+    });
+
+    // Initial upcoming load
+    loadUpcoming();
+  });
+})();
+</script>
+@endpush
 @endsection
