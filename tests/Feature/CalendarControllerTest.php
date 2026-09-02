@@ -52,7 +52,10 @@ test('authenticated users can visit the calendar page', function () {
     [$company, $user] = calendarTestUser();
     $this->actingAs($user)
         ->get(route('calendar'))
-        ->assertSuccessful();
+        ->assertSuccessful()
+        ->assertSee('id="mini-calendar"', false)
+        ->assertSee('miniCalendarInstance', false)
+        ->assertSee('dateClick', false);
 });
 
 // ------------------------------------------------------------------

@@ -1,485 +1,993 @@
 @extends('layouts.app')
-
-@push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.css">
-<style>
-  .fc .fc-button-primary {
-    background-color: #696cff;
-    border-color: #696cff;
-  }
-  .fc .fc-button-primary:hover,
-  .fc .fc-button-primary:not(:disabled):active,
-  .fc .fc-button-primary:not(:disabled).fc-button-active {
-    background-color: #5a5ccf;
-    border-color: #5a5ccf;
-  }
-  .fc-event {
-    border-radius: 4px !important;
-    font-size: .78rem !important;
-    cursor: pointer;
-  }
-  .fc .fc-day-today {
-    background-color: rgba(105, 108, 255, .06) !important;
-  }
-  .upcoming-event-item:hover {
-    background: rgba(105,108,255,.04);
-    border-radius: 8px;
-    transition: background .15s ease;
-  }
-  .letter-spacing-1 { letter-spacing: .05em; }
-  .cursor-pointer { cursor: pointer; }
-  .fc-toolbar-title { font-size: 1rem !important; font-weight: 600 !important; }
-  .calendar-stat { border-left: 3px solid var(--calendar-stat-color); }
-  .calendar-stat-value { font-size: 1.35rem; line-height: 1; }
-  #calendar-error { display: none; }
-  @media (max-width: 767.98px) {
-    .app-calendar-sidebar { width: 100% !important; min-height: auto !important; }
-    .app-calendar-content .card-body { padding: 1rem !important; }
-    .fc .fc-toolbar { flex-wrap: wrap; gap: .65rem; }
-    .fc .fc-toolbar-chunk { display: flex; align-items: center; }
-  }
-</style>
-@endpush
-
-
 @section('content')
-<div class="container-xxl flex-grow-1 container-p-y">
-
-  {{-- Page header --}}
-  <div class="d-flex align-items-center justify-content-between mb-4">
-    <div>
-      <h4 class="mb-1 fw-semibold">Sales Calendar</h4>
-      <p class="text-muted mb-0 small">Upcoming follow-ups, site visits &amp; meetings</p>
-    </div>
-  </div>
-
-  <div class="row g-3 mb-4" aria-label="Calendar activity summary">
-    <div class="col-12 col-sm-4">
-      <div class="card border-0 shadow-sm h-100 calendar-stat" style="--calendar-stat-color:#696cff;">
-        <div class="card-body py-3 d-flex align-items-center justify-content-between">
-          <div><div class="text-muted small">Follow-ups</div><div class="calendar-stat-value fw-semibold" id="stat-followup">0</div></div>
-          <i class="bx bx-phone-call fs-2" style="color:#696cff;" aria-hidden="true"></i>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-sm-4">
-      <div class="card border-0 shadow-sm h-100 calendar-stat" style="--calendar-stat-color:#fd7e14;">
-        <div class="card-body py-3 d-flex align-items-center justify-content-between">
-          <div><div class="text-muted small">Site visits</div><div class="calendar-stat-value fw-semibold" id="stat-visit">0</div></div>
-          <i class="bx bx-map-pin fs-2" style="color:#fd7e14;" aria-hidden="true"></i>
-        </div>
-      </div>
-    </div>
-    <div class="col-12 col-sm-4">
-      <div class="card border-0 shadow-sm h-100 calendar-stat" style="--calendar-stat-color:#28a745;">
-        <div class="card-body py-3 d-flex align-items-center justify-content-between">
-          <div><div class="text-muted small">Meetings</div><div class="calendar-stat-value fw-semibold" id="stat-gmeet">0</div></div>
-          <i class="bx bx-video fs-2" style="color:#28a745;" aria-hidden="true"></i>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <div class="card app-calendar-wrapper shadow-sm border-0">
-    <div class="row g-0">
-
-      {{-- ===== SIDEBAR ===== --}}
-      <div class="col-auto app-calendar-sidebar border-end d-flex flex-column" id="app-calendar-sidebar" style="width:280px; min-height:600px;">
-
-        {{-- Filter section --}}
-        <div class="p-4 border-bottom">
-          <h6 class="text-uppercase fw-bold text-muted small mb-3 letter-spacing-1">Event Filters</h6>
-
-          <div class="d-flex flex-column gap-2">
-            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-all">
-              <input class="form-check-input calendar-filter-all mt-0" type="checkbox" id="filter-all" checked>
-              <span class="fw-medium">View All</span>
-            </label>
-
-            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-followup">
-              <input class="form-check-input calendar-filter-type mt-0" type="checkbox" id="filter-followup"
-                data-type="followup" checked style="accent-color:#696cff;">
-              <span class="badge rounded-pill px-2 py-1" style="background:rgba(105,108,255,.12); color:#696cff;">
-                <i class="bx bx-phone-call me-1"></i>Follow-up
-              </span>
-            </label>
-
-            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-visit">
-              <input class="form-check-input calendar-filter-type mt-0" type="checkbox" id="filter-visit"
-                data-type="visit" checked style="accent-color:#fd7e14;">
-              <span class="badge rounded-pill px-2 py-1" style="background:rgba(253,126,20,.12); color:#fd7e14;">
-                <i class="bx bx-map-pin me-1"></i>Visit
-              </span>
-            </label>
-
-            <label class="d-flex align-items-center gap-2 cursor-pointer user-select-none" for="filter-gmeet">
-              <input class="form-check-input calendar-filter-type mt-0" type="checkbox" id="filter-gmeet"
-                data-type="gmeet" checked style="accent-color:#28a745;">
-              <span class="badge rounded-pill px-2 py-1" style="background:rgba(40,167,69,.12); color:#28a745;">
-                <i class="bx bx-video me-1"></i>Meeting
-              </span>
-            </label>
-          </div>
-        </div>
-
-        {{-- Upcoming events section --}}
-        <div class="p-4 flex-grow-1 overflow-auto">
-          <h6 class="text-uppercase fw-bold text-muted small mb-3 letter-spacing-1">Upcoming</h6>
-          <div id="upcoming-events-list">
-            <div class="text-center text-muted py-4">
-              <i class="bx bx-calendar-check fs-2 opacity-50"></i>
-              <p class="small mt-2 mb-0">Loading…</p>
-            </div>
-          </div>
-          <div id="calendar-error" class="alert alert-danger small mb-0" role="alert">
-            We could not load scheduled activities. Please refresh the page.
-          </div>
-        </div>
-
-      </div>
-      {{-- ===== /SIDEBAR ===== --}}
-
-      {{-- ===== MAIN CALENDAR ===== --}}
-      <div class="col app-calendar-content">
-        <div class="card shadow-none border-0 h-100">
-          <div class="card-body p-4">
-            <div id="calendar"></div>
-          </div>
-        </div>
-      </div>
-      {{-- ===== /MAIN CALENDAR ===== --}}
-
-    </div>
-  </div>
-
-</div>
-
-{{-- ===== EVENT DETAIL MODAL ===== --}}
-<div class="modal fade" id="eventDetailModal" tabindex="-1" aria-labelledby="eventDetailModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content border-0 shadow-lg">
-      <div class="modal-header border-0 pb-0" id="eventDetailHeader">
-        <div>
-          <span class="badge rounded-pill mb-2 fs-6" id="modal-type-badge"></span>
-          <h5 class="modal-title fw-bold mb-0" id="eventDetailModalLabel" style="font-size:1.1rem;"></h5>
-        </div>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body pt-3">
-        <div class="row g-3">
-          <div class="col-6">
-            <div class="small text-muted fw-semibold mb-1">LEAD</div>
-            <div class="fw-medium" id="modal-lead-name">—</div>
-          </div>
-          <div class="col-6">
-            <div class="small text-muted fw-semibold mb-1">STATUS</div>
-            <span class="badge" id="modal-status-badge">—</span>
-          </div>
-          <div class="col-12">
-            <div class="small text-muted fw-semibold mb-1">SCHEDULED AT</div>
-            <div class="fw-medium" id="modal-scheduled-at">—</div>
-          </div>
-          <div class="col-12" id="modal-subject-row">
-            <div class="small text-muted fw-semibold mb-1">SUBJECT</div>
-            <div id="modal-subject">—</div>
-          </div>
-          <div class="col-12" id="modal-summary-row" style="display:none;">
-            <div class="small text-muted fw-semibold mb-1">NOTES</div>
-            <div class="text-muted small" id="modal-summary">—</div>
-          </div>
-        </div>
-      </div>
-      <div class="modal-footer border-0 pt-0">
-        <a href="#" class="btn btn-primary btn-sm" id="modal-lead-link" target="_blank">
-          <i class="bx bx-link-external me-1"></i>View Lead
-        </a>
-        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Close</button>
-      </div>
-    </div>
-  </div>
-</div>
-{{-- ===== /EVENT DETAIL MODAL ===== --}}
-
-@push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@5.11.5/main.min.js"></script>
-<script>
-(function () {
-  'use strict';
-
-  // ------------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------------
-  const typeColors = {
-    followup: { bg: '#696cff', text: '#fff', label: 'Follow-up', icon: 'bx-phone-call' },
-    visit:    { bg: '#fd7e14', text: '#fff', label: 'Visit',     icon: 'bx-map-pin' },
-    gmeet:    { bg: '#28a745', text: '#fff', label: 'Meeting',   icon: 'bx-video' },
-  };
-
-  const statusBadge = {
-    pending:   'bg-label-warning',
-    completed: 'bg-label-success',
-    cancelled: 'bg-label-secondary',
-    missed:    'bg-label-danger',
-  };
-
-  function formatDt(isoStr) {
-    if (!isoStr) return '—';
-    const d = new Date(isoStr);
-    return d.toLocaleDateString('en-IN', {
-      day: '2-digit', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true,
-    });
-  }
-
-  // ------------------------------------------------------------------
-  // Track which types are visible
-  // ------------------------------------------------------------------
-  const visibleTypes = new Set(['followup', 'visit', 'gmeet']);
-  let calendarInstance = null;
-
-  // ------------------------------------------------------------------
-  // Upcoming events list
-  // ------------------------------------------------------------------
-  function updateStats(events) {
-    ['followup', 'visit', 'gmeet'].forEach(type => {
-      const count = events.filter(event => event.extendedProps.activityType === type).length;
-      document.getElementById(`stat-${type}`).textContent = count;
-    });
-  }
-
-  function showCalendarError(show) {
-    document.getElementById('calendar-error').style.display = show ? '' : 'none';
-  }
-
-  function escapeHtml(value) {
-    return String(value ?? '').replace(/[&<>'"]/g, character => ({
-      '&': '&amp;',
-      '<': '&lt;',
-      '>': '&gt;',
-      "'": '&#39;',
-      '"': '&quot;',
-    })[character]);
-  }
-
-  async function loadUpcoming() {
-    const now = new Date().toISOString();
-    const future = new Date(Date.now() + 60 * 24 * 60 * 60 * 1000).toISOString(); // next 60 days
-    try {
-      const res = await fetch(`{{ route('calendar.events') }}?start=${now}&end=${future}`);
-      if (!res.ok) throw new Error(`Calendar request failed with ${res.status}`);
-      const events = await res.json();
-      updateStats(events);
-      renderUpcoming(events.filter(e => visibleTypes.has(e.extendedProps.activityType)).slice(0, 6));
-      showCalendarError(false);
-    } catch (e) {
-      console.error('Upcoming load failed', e);
-      showCalendarError(true);
-    }
-  }
-
-  function renderUpcoming(events) {
-    const list = document.getElementById('upcoming-events-list');
-    if (!events.length) {
-      list.innerHTML = `<div class="text-center text-muted py-4">
-        <i class="bx bx-calendar-x fs-2 opacity-50"></i>
-        <p class="small mt-2 mb-0">No upcoming events</p>
-      </div>`;
-      return;
-    }
-
-    list.innerHTML = events.map(ev => {
-      const p = ev.extendedProps;
-      const c = typeColors[p.activityType] || { bg: '#8592a3', text: '#fff', label: 'Activity', icon: 'bx-calendar' };
-      const date = new Date(p.scheduledAt);
-      const dayNum = date.toLocaleDateString('en-IN', { day: '2-digit' });
-      const mon = date.toLocaleDateString('en-IN', { month: 'short' });
-      const time = date.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-      return `
-        <div class="d-flex align-items-start gap-3 mb-3 pb-3 border-bottom upcoming-event-item"
-             data-event-id="${ev.id}" style="cursor:pointer;" title="Click to view">
-          <div class="rounded-3 d-flex flex-column align-items-center justify-content-center flex-shrink-0"
-               style="width:40px;height:44px;background:${c.bg}20; border-left:3px solid ${c.bg};">
-            <span class="fw-bold lh-1" style="font-size:.8rem; color:${c.bg};">${dayNum}</span>
-            <span class="text-uppercase lh-1" style="font-size:.6rem; color:${c.bg};">${mon}</span>
-          </div>
-          <div class="overflow-hidden">
-            <div class="fw-medium text-truncate small">${escapeHtml(p.leadName)}</div>
-            <div class="text-muted" style="font-size:.7rem;">
-              <i class="bx ${c.icon} me-1"></i>${escapeHtml(c.label)} · ${escapeHtml(time)}
-            </div>
-          </div>
-        </div>`;
-    }).join('');
-
-    // Clicking upcoming item → jump calendar & open modal
-    list.querySelectorAll('.upcoming-event-item').forEach(item => {
-      item.addEventListener('click', () => {
-        const id = parseInt(item.dataset.eventId);
-        if (calendarInstance) {
-          const ev = calendarInstance.getEventById(id);
-          if (ev) {
-            calendarInstance.gotoDate(ev.start);
-            openModal(ev);
-          }
+<style>
+        * {
+            box-sizing: border-box;
         }
-      });
-    });
-  }
 
-  // ------------------------------------------------------------------
-  // Event detail modal
-  // ------------------------------------------------------------------
-  let bsModal = null;
-
-  function openModal(event) {
-    const p = event.extendedProps;
-    const c = typeColors[p.activityType] || { bg: '#8592a3', text: '#fff', label: ucfirst(p.activityType), icon: 'bx-calendar' };
-
-    // Header
-    document.getElementById('eventDetailHeader').style.borderBottom = `3px solid ${c.bg}`;
-    const typeBadge = document.getElementById('modal-type-badge');
-    typeBadge.style.background = c.bg + '20';
-    typeBadge.style.color = c.bg;
-    typeBadge.innerHTML = `<i class="bx ${c.icon} me-1"></i>${c.label}`;
-
-    document.getElementById('eventDetailModalLabel').textContent = p.subject || event.title;
-
-    // Fields
-    document.getElementById('modal-lead-name').textContent = p.leadName;
-    document.getElementById('modal-scheduled-at').textContent = formatDt(p.scheduledAt);
-
-    const statusEl = document.getElementById('modal-status-badge');
-    statusEl.className = 'badge ' + (statusBadge[p.status] || 'bg-label-secondary');
-    statusEl.textContent = ucfirst(p.status || '—');
-
-    const subjectEl = document.getElementById('modal-subject');
-    subjectEl.textContent = p.subject || '—';
-
-    const summaryRow = document.getElementById('modal-summary-row');
-    if (p.summary) {
-      summaryRow.style.display = '';
-      document.getElementById('modal-summary').textContent = p.summary;
-    } else {
-      summaryRow.style.display = 'none';
-    }
-
-    // Lead link
-    const leadLink = document.getElementById('modal-lead-link');
-    leadLink.href = p.leadId
-      ? `{{ url('sales/lead-view') }}/${p.leadId}`
-      : '#';
-
-    if (!bsModal) {
-      bsModal = new bootstrap.Modal(document.getElementById('eventDetailModal'));
-    }
-    bsModal.show();
-  }
-
-  function ucfirst(str) {
-    if (!str) return '';
-    return str.charAt(0).toUpperCase() + str.slice(1);
-  }
-
-  // ------------------------------------------------------------------
-  // FullCalendar initialisation
-  // ------------------------------------------------------------------
-  document.addEventListener('DOMContentLoaded', function () {
-    const calendarEl = document.getElementById('calendar');
-
-    calendarInstance = new FullCalendar.Calendar(calendarEl, {
-      plugins: ['dayGrid', 'timeGrid', 'list', 'interaction'],
-      initialView: 'dayGridMonth',
-      headerToolbar: {
-        left:   'prev,next today',
-        center: 'title',
-        right:  'dayGridMonth,timeGridWeek,timeGridDay,listMonth',
-      },
-      height: 'auto',
-      events: {
-        url: '{{ route("calendar.events") }}',
-        method: 'GET',
-        failure: function () {
-          console.error('Failed to load calendar events.');
-          showCalendarError(true);
-        },
-      },
-
-      // Filter on client after fetch
-      eventDisplay: 'block',
-
-      eventDidMount: function (info) {
-        const type = info.event.extendedProps.activityType;
-        if (!visibleTypes.has(type)) {
-          info.el.style.display = 'none';
+        body {
+            margin: 0;
+            background: #ffffff;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #3d4b5c;
         }
-      },
 
-      eventClick: function (info) {
-        openModal(info.event);
-      },
+        /* =========================
+           MAIN CARD
+        ========================= */
 
-      eventMouseEnter: function (info) {
-        info.el.style.transform = 'scale(1.02)';
-        info.el.style.transition = 'transform .15s ease';
-        info.el.style.zIndex = '9';
-      },
+        .calendar-card {
+            width: 100%;
+            height: 835px;
+            border: 0;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: none;
+        }
 
-      eventMouseLeave: function (info) {
-        info.el.style.transform = '';
-      },
+        .calendar-wrapper {
+            height: 100%;
+            display: flex;
+        }
 
-      noEventsContent: 'No scheduled activities for this period.',
+        /* =========================
+           SIDEBAR
+        ========================= */
 
-      loading: function (isLoading) {
-        if (isLoading) showCalendarError(false);
-      },
-    });
+        .calendar-sidebar {
+            width: 371px;
+            min-width: 371px;
+            height: 100%;
+            border-right: 1px solid #e1e4e8;
+            background: #fff;
+        }
 
-    calendarInstance.render();
+        .add-event-wrapper {
+            height: 106px;
+            padding: 28px 29px;
+            border-bottom: 1px solid #e1e4e8;
+        }
 
-    // ------------------------------------------------------------------
-    // Filter checkboxes
-    // ------------------------------------------------------------------
-    const filterAll  = document.getElementById('filter-all');
-    const typeChecks = document.querySelectorAll('.calendar-filter-type');
+        .btn-add-event {
+            width: 100%;
+            height: 48px;
+            border: 0;
+            border-radius: 8px;
 
-    function applyFilters() {
-      // Rebuild visibleTypes
-      visibleTypes.clear();
-      typeChecks.forEach(cb => {
-        if (cb.checked) visibleTypes.add(cb.dataset.type);
-      });
+            background: linear-gradient(
+                90deg,
+                #6663ff 0%,
+                #7674ff 100%
+            );
 
-      // Show/hide rendered events
-      calendarInstance.getEvents().forEach(ev => {
-        const type = ev.extendedProps.activityType;
-        const els  = calendarInstance.el.querySelectorAll(`[data-event-id="${ev.id}"]`);
-        // FullCalendar doesn't expose per-element hide easily, use classlist trick
-        ev.setProp('display', visibleTypes.has(type) ? 'block' : 'none');
-      });
+            color: #fff;
+            font-size: 18px;
+            font-weight: 500;
 
-      // Sync "View All" state
-      const allChecked = [...typeChecks].every(cb => cb.checked);
-      const noneChecked = [...typeChecks].every(cb => !cb.checked);
-      filterAll.indeterminate = !allChecked && !noneChecked;
-      filterAll.checked = allChecked;
+            box-shadow: 0 5px 13px rgba(93, 91, 255, 0.28);
+        }
 
-      loadUpcoming();
-    }
+        .btn-add-event:hover {
+            color: #fff;
+        }
 
-    filterAll.addEventListener('change', function () {
-      typeChecks.forEach(cb => { cb.checked = this.checked; });
-      applyFilters();
-    });
+        .btn-add-event i {
+            font-size: 18px;
+            margin-right: 10px;
+        }
 
-    typeChecks.forEach(cb => {
-      cb.addEventListener('change', applyFilters);
-    });
+        /* =========================
+           MINI CALENDAR
+        ========================= */
 
-    // Initial upcoming load
-    loadUpcoming();
-  });
-})();
-</script>
-@endpush
+        .mini-calendar-wrapper {
+            height: 430px;
+            padding: 27px 27px 20px;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        .mini-calendar-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 22px;
+        }
+
+        .mini-nav-btn {
+            width: 37px;
+            height: 38px;
+            border: 0;
+            border-radius: 7px;
+            background: #f0f1f3;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: #6c7784;
+            font-size: 20px;
+        }
+
+        .mini-month-name {
+            font-size: 18px;
+            font-weight: 400;
+            color: #455364;
+        }
+
+        .mini-calendar {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+            table-layout: fixed;
+        }
+
+        .mini-calendar th {
+            height: 27px;
+            text-align: center;
+            font-size: 14px;
+            font-weight: 400;
+            color: #445162;
+        }
+
+        .mini-calendar td {
+            height: 31px;
+            padding: 0;
+            text-align: center;
+            font-size: 16px;
+            color: #3f4d5c;
+        }
+
+        .mini-calendar td.muted {
+            color: #aeb4bc;
+        }
+
+        .mini-calendar td.selected span {
+            width: 45px;
+            height: 45px;
+            margin: -7px auto 0;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-radius: 8px;
+            background: #e9e8ff;
+            color: #6563ff;
+        }
+
+        /* =========================
+           FILTERS
+        ========================= */
+
+        .event-filters {
+            padding: 34px 27px;
+        }
+
+        .event-filters h4 {
+            margin: 0 0 23px;
+
+            font-size: 22px;
+            font-weight: 500;
+            color: #3e4d5c;
+        }
+
+        .filter-item {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+
+            margin-bottom: 19px;
+
+            font-size: 18px;
+            color: #465466;
+        }
+
+        .filter-check {
+            width: 23px;
+            height: 23px;
+
+            border-radius: 5px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: #fff;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .filter-all {
+            background: #8b98a8;
+        }
+
+        .filter-personal {
+            background: #ff4329;
+        }
+
+        .filter-business {
+            background: #6563ff;
+        }
+
+        .filter-family {
+            background: #ffa800;
+        }
+
+        /* =========================
+           MAIN CALENDAR
+        ========================= */
+
+        .calendar-main {
+            flex: 1;
+            min-width: 0;
+            height: 100%;
+            background: #fff;
+        }
+
+        /* =========================
+           CALENDAR HEADER
+        ========================= */
+
+        .calendar-header {
+            height: 105px;
+            border-bottom: 1px solid #e1e4e8;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            padding: 0 31px 0 43px;
+        }
+
+        .calendar-header-left {
+            display: flex;
+            align-items: center;
+            gap: 27px;
+        }
+
+        .calendar-arrow {
+            border: 0;
+            background: transparent;
+
+            width: 27px;
+            height: 35px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            color: #65717e;
+            font-size: 27px;
+            padding: 0;
+        }
+
+        .calendar-month-title {
+            margin: 0;
+
+            font-size: 32px;
+            line-height: 1;
+            font-weight: 400;
+
+            color: #64707c;
+        }
+
+        /* =========================
+           VIEW BUTTONS
+        ========================= */
+
+        .calendar-view-buttons {
+            display: flex;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .calendar-view-buttons .btn {
+            height: 47px;
+            min-width: 81px;
+
+            border: 0;
+            border-right: 1px solid #d8d8fa;
+            border-radius: 0;
+
+            background: #e9e9ff;
+            color: #7776ff;
+
+            font-size: 18px;
+            font-weight: 400;
+        }
+
+        .calendar-view-buttons .btn:last-child {
+            border-right: 0;
+        }
+
+        .calendar-view-buttons .btn.active {
+            background: linear-gradient(
+                90deg,
+                #6866ff,
+                #716fff
+            );
+            color: #fff;
+        }
+
+        /* =========================
+           CALENDAR GRID
+        ========================= */
+
+        .calendar-grid {
+            height: calc(100% - 105px);
+            display: grid;
+
+            grid-template-columns: repeat(7, 1fr);
+            grid-template-rows: 48px repeat(5, 1fr);
+
+            border-left: 0;
+        }
+
+        /* Week header */
+
+        .weekday {
+            height: 48px;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            border-right: 1px solid #e0e3e7;
+            border-bottom: 1px solid #e0e3e7;
+
+            font-size: 18px;
+            font-weight: 400;
+
+            color: #344251;
+        }
+
+        .weekday:last-child {
+            border-right: 0;
+        }
+
+        /* Calendar day */
+
+        .calendar-day {
+            position: relative;
+
+            min-width: 0;
+            min-height: 0;
+
+            border-right: 1px solid #e0e3e7;
+            border-bottom: 1px solid #e0e3e7;
+
+            background: #fff;
+            overflow: hidden;
+        }
+
+        .calendar-day:nth-child(7n) {
+            border-right: 0;
+        }
+
+        .day-number {
+            position: absolute;
+
+            top: 11px;
+            left: 10px;
+
+            font-size: 18px;
+            font-weight: 400;
+
+            color: #66727f;
+        }
+
+        .day-number.muted {
+            color: #aeb4bb;
+        }
+
+        .today-cell {
+            background: #f1f2f3;
+        }
+
+        /* =========================
+           EVENTS
+        ========================= */
+
+        .event {
+            position: absolute;
+
+            height: 36px;
+
+            display: flex;
+            align-items: center;
+
+            padding: 0 10px;
+
+            border-radius: 6px;
+
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+
+            font-size: 16px;
+            font-weight: 400;
+        }
+
+        .event-purple {
+            background: #e5e4ff;
+            color: #6664ff;
+        }
+
+        .event-orange {
+            background: #fff0d2;
+            color: #ffa700;
+        }
+
+        .event-cyan {
+            background: #d8f4fb;
+            color: #05afd0;
+        }
+
+        .event-red {
+            background: #ffe0dc;
+            color: #ff3f2a;
+        }
+
+        .event-green {
+            background: #def8d9;
+            color: #50c72d;
+        }
+
+        /* Event positions */
+
+        .event-design {
+            top: 48px;
+            left: 11px;
+            right: 11px;
+        }
+
+        .event-dinner {
+            top: 49px;
+            left: 10px;
+            right: calc(100% - 142px);
+        }
+
+        .event-dart {
+            top: 93px;
+            left: 10px;
+            right: calc(100% - 142px);
+        }
+
+        .event-doctor {
+            top: 49px;
+            left: 10px;
+            right: 11px;
+        }
+
+        .event-meeting {
+            top: 93px;
+            left: 10px;
+            right: 11px;
+        }
+
+        .event-family {
+            top: 49px;
+            left: 10px;
+            width: calc(200% - 21px);
+        }
+
+        .event-monthly {
+            top: 49px;
+            left: 10px;
+            right: calc(100% - 142px);
+        }
+
+        .more-events {
+            position: absolute;
+            top: 138px;
+            left: 12px;
+
+            font-size: 16px;
+            color: #65717f;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 1000px) {
+
+            .calendar-sidebar {
+                width: 300px;
+                min-width: 300px;
+            }
+
+            .calendar-month-title {
+                font-size: 26px;
+            }
+
+            .calendar-header {
+                padding-left: 25px;
+                padding-right: 20px;
+            }
+
+            .calendar-view-buttons .btn {
+                min-width: 65px;
+                font-size: 15px;
+            }
+
+            .weekday,
+            .day-number {
+                font-size: 14px;
+            }
+
+            .event {
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 768px) {
+
+            .calendar-wrapper {
+                display: block;
+            }
+
+            .calendar-sidebar {
+                width: 100%;
+                height: auto;
+            }
+
+            .mini-calendar-wrapper {
+                height: auto;
+            }
+
+            .calendar-main {
+                height: 700px;
+            }
+
+            .calendar-header {
+                height: auto;
+                min-height: 90px;
+                flex-wrap: wrap;
+                gap: 15px;
+                padding: 20px;
+            }
+
+            .calendar-grid {
+                overflow-x: auto;
+                min-width: 850px;
+            }
+        }
+    </style>
+<div class="container-xxl flex-grow-1 container-p-y calendar-page">
+  <div class="card calendar-card">
+
+        <div class="calendar-wrapper">
+
+            <!-- =========================================
+                 LEFT SIDEBAR
+            ========================================== -->
+
+            <aside class="calendar-sidebar">
+
+                <!-- Add Event -->
+                <div class="add-event-wrapper">
+
+                    <button class="btn btn-add-event">
+                        <i class="bi bi-plus-lg"></i>
+                        Add Event
+                    </button>
+
+                </div>
+
+
+                <!-- Mini Calendar -->
+                <div class="mini-calendar-wrapper">
+
+                    <div class="mini-calendar-title">
+
+                        <button class="mini-nav-btn">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+
+                        <span class="mini-month-name">
+                            September&nbsp; 2026
+                        </span>
+
+                        <button class="mini-nav-btn">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+
+                    </div>
+
+
+                    <table class="mini-calendar">
+
+                        <thead>
+                            <tr>
+                                <th>Sun</th>
+                                <th>Mon</th>
+                                <th>Tue</th>
+                                <th>Wed</th>
+                                <th>Thu</th>
+                                <th>Fri</th>
+                                <th>Sat</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            <tr>
+                                <td class="muted">30</td>
+                                <td class="muted">31</td>
+                                <td>1</td>
+                                <td class="selected">
+                                    <span>2</span>
+                                </td>
+                                <td>3</td>
+                                <td>4</td>
+                                <td>5</td>
+                            </tr>
+
+                            <tr>
+                                <td>6</td>
+                                <td>7</td>
+                                <td>8</td>
+                                <td>9</td>
+                                <td>10</td>
+                                <td>11</td>
+                                <td>12</td>
+                            </tr>
+
+                            <tr>
+                                <td>13</td>
+                                <td>14</td>
+                                <td>15</td>
+                                <td>16</td>
+                                <td>17</td>
+                                <td>18</td>
+                                <td>19</td>
+                            </tr>
+
+                            <tr>
+                                <td>20</td>
+                                <td>21</td>
+                                <td>22</td>
+                                <td>23</td>
+                                <td>24</td>
+                                <td>25</td>
+                                <td>26</td>
+                            </tr>
+
+                            <tr>
+                                <td>27</td>
+                                <td>28</td>
+                                <td>29</td>
+                                <td>30</td>
+                                <td class="muted">1</td>
+                                <td class="muted">2</td>
+                                <td class="muted">3</td>
+                            </tr>
+
+                            <tr>
+                                <td class="muted">4</td>
+                                <td class="muted">5</td>
+                                <td class="muted">6</td>
+                                <td class="muted">7</td>
+                                <td class="muted">8</td>
+                                <td class="muted">9</td>
+                                <td class="muted">10</td>
+                            </tr>
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+
+                <!-- Event Filters -->
+                <div class="event-filters">
+
+                    <h4>Event Filters</h4>
+
+                    <div class="filter-item">
+                        <span class="filter-check filter-all">
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+                        <span>View All</span>
+                    </div>
+
+                    <div class="filter-item">
+                        <span class="filter-check filter-personal">
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+                        <span>Personal</span>
+                    </div>
+
+                    <div class="filter-item">
+                        <span class="filter-check filter-business">
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+                        <span>Business</span>
+                    </div>
+
+                    <div class="filter-item">
+                        <span class="filter-check filter-family">
+                            <i class="bi bi-check-lg"></i>
+                        </span>
+                        <span>Family</span>
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+            <!-- =========================================
+                 RIGHT MAIN CALENDAR
+            ========================================== -->
+
+            <main class="calendar-main">
+
+                <!-- Calendar Header -->
+
+                <div class="calendar-header">
+
+                    <div class="calendar-header-left">
+
+                        <button class="calendar-arrow">
+                            <i class="bi bi-chevron-left"></i>
+                        </button>
+
+                        <button class="calendar-arrow">
+                            <i class="bi bi-chevron-right"></i>
+                        </button>
+
+                        <h1 class="calendar-month-title">
+                            September 2026
+                        </h1>
+
+                    </div>
+
+
+                    <!-- View Buttons -->
+
+                    <div class="calendar-view-buttons">
+
+                        <button class="btn active">
+                            Month
+                        </button>
+
+                        <button class="btn">
+                            Week
+                        </button>
+
+                        <button class="btn">
+                            Day
+                        </button>
+
+                        <button class="btn">
+                            List
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- =========================================
+                     CALENDAR GRID
+                ========================================== -->
+
+                <div class="calendar-grid">
+
+                    <!-- Weekdays -->
+
+                    <div class="weekday">Sun</div>
+                    <div class="weekday">Mon</div>
+                    <div class="weekday">Tue</div>
+                    <div class="weekday">Wed</div>
+                    <div class="weekday">Thu</div>
+                    <div class="weekday">Fri</div>
+                    <div class="weekday">Sat</div>
+
+
+                    <!-- ROW 1 -->
+
+                    <div class="calendar-day">
+                        <span class="day-number muted">30</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number muted">31</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">1</span>
+                    </div>
+
+                    <div class="calendar-day today-cell">
+
+                        <span class="day-number">2</span>
+
+                        <div class="event event-purple event-design">
+                            11:02p Design Review
+                        </div>
+
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">3</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">4</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">5</span>
+                    </div>
+
+
+                    <!-- ROW 2 -->
+
+                    <div class="calendar-day">
+                        <span class="day-number">6</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">7</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">8</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">9</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">10</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">11</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">12</span>
+                    </div>
+
+
+                    <!-- ROW 3 -->
+
+                    <div class="calendar-day">
+                        <span class="day-number">13</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">14</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">15</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">16</span>
+                    </div>
+
+                    <div class="calendar-day">
+
+                        <span class="day-number">17</span>
+
+                        <div class="event event-orange event-dinner">
+                            12a Dinner
+                        </div>
+
+                        <div class="event event-cyan event-dart">
+                            Dart Game?
+                        </div>
+
+                        <span class="more-events">
+                            +2 more
+                        </span>
+
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">18</span>
+                    </div>
+
+                    <div class="calendar-day">
+
+                        <span class="day-number">19</span>
+
+                        <div class="event event-red event-doctor">
+                            12a Doctor's App
+                        </div>
+
+                        <div class="event event-purple event-meeting">
+                            Meeting With Client
+                        </div>
+
+                    </div>
+
+
+                    <!-- ROW 4 -->
+
+                    <div class="calendar-day">
+                        <span class="day-number">20</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">21</span>
+
+                        <div class="event event-green event-family">
+                            Family Trip
+                        </div>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">22</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">23</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">24</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">25</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">26</span>
+                    </div>
+
+
+                    <!-- ROW 5 -->
+
+                    <div class="calendar-day">
+                        <span class="day-number">27</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">28</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">29</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number">30</span>
+                    </div>
+
+                    <div class="calendar-day">
+
+                        <span class="day-number muted">1</span>
+
+                        <div class="event event-purple event-monthly">
+                            Monthly Meeting
+                        </div>
+
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number muted">2</span>
+                    </div>
+
+                    <div class="calendar-day">
+                        <span class="day-number muted">3</span>
+                    </div>
+
+                </div>
+
+            </main>
+
+        </div>
+
+    </div>
+</div>
 @endsection
