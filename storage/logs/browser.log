@@ -211,3 +211,5 @@
 [2026-08-28 13:24:11] local.ERROR: Uncaught TypeError: Cannot read properties of null (reading 'content') http://127.0.0.1:8000/sales/kanban 906 68 TypeError Cannot read properties of null (reading 'content') TypeError: Cannot read properties of null (reading 'content')
     at http://127.0.0.1:8000/sales/kanban:906:68
     at http://127.0.0.1:8000/sales/kanban:933:3 {"url":"http://127.0.0.1:8000/sales/kanban","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/151.0.0.0 Safari/537.36","timestamp":"2026-08-28T13:24:10.130Z"} 
+[2026-08-31 16:58:27] local.ERROR: Script error. null 0 0 null {"url":"http://127.0.0.1:8000/calendar","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36","timestamp":"2026-08-31T16:58:26.606Z"} 
+[2026-08-31 16:58:27] local.ERROR: Script error. null 0 0 null {"url":"http://127.0.0.1:8000/calendar","user_agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/152.0.0.0 Safari/537.36","timestamp":"2026-08-31T16:58:26.607Z"} 

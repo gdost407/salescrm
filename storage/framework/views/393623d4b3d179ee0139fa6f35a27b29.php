@@ -2,6 +2,7 @@
 <html lang="en" class="light-style layout-menu-fixed" dir="ltr" data-theme="theme-default" data-assets-path="../assets/" data-template="vertical-menu-template-free">
 <head>
     <?php echo $__env->make('partials.head', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+    <?php echo $__env->yieldPushContent('styles'); ?>
 </head>
 
 <body>
@@ -63,5 +64,6 @@
     })();
   </script>
   <?php echo $__env->make('partials.foot', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?>
+  <?php echo $__env->yieldPushContent('scripts'); ?>
 </body>
 </html><?php /**PATH P:\xampp\htdocs\GDost\salescrm\resources\views/layouts/app.blade.php ENDPATH**/ ?>

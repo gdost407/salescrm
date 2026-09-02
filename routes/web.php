@@ -34,6 +34,7 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])->group(function () {
     Route::get('calendar', [CalendarController::class, 'index'])->name('calendar');
+    Route::get('calendar/events', [CalendarController::class, 'events'])->name('calendar.events');
     // Sales Routes
     Route::prefix('sales')->group(function () {
         Route::get('kanban', [SalesController::class, 'kanban'])->name('sale-kanban');

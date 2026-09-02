@@ -386,13 +386,13 @@
 
 .bx-border {
   padding: 0.25em;
-  border: 0.07em solid rgba(0, 0, 0, 0.1);
+  border: 0.07em dashed rgba(0, 0, 0, 0.1);
   border-radius: 0.25em;
 }
 
 .bx-border-circle {
   padding: 0.25em;
-  border: 0.07em solid rgba(0, 0, 0, 0.1);
+  border: 0.07em dashed rgba(0, 0, 0, 0.1);
   border-radius: 50%;
 }
 

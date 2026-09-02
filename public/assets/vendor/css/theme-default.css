@@ -121,11 +121,11 @@ a.bg-primary:hover, a.bg-primary:focus {
 }
 
 .border-label-primary {
-  border: 3px solid #c3c4ff !important;
+  border: 3px dashed #c3c4ff !important;
 }
 
 .border-light-primary {
-  border: 3px solid rgba(105, 108, 255, 0.08);
+  border: 3px dashed rgba(105, 108, 255, 0.08);
 }
 
 .page-item.active .page-link, .page-item.active .page-link:hover, .page-item.active .page-link:focus,
@@ -329,7 +329,7 @@ button.list-group-item-primary.active {
 }
 
 .custom-option.checked {
-  border: 1px solid #696cff;
+  border: 1px dashed #696cff;
 }
 
 .form-switch .form-check-input:focus {
@@ -759,12 +759,12 @@ html:not(.layout-menu-collapsed) .bg-menu-theme .menu-inner .menu-item .menu-lin
 }
 .bg-menu-theme .menu-sub > .menu-item.active > .menu-link:not(.menu-toggle):before {
   background-color: #696cff !important;
-  border: 3px solid #e7e7ff !important;
+  border: 3px dashed #e7e7ff !important;
 }
 
 .app-brand .layout-menu-toggle {
   background-color: #696cff;
-  border: 7px solid #f5f5f9;
+  border: 7px dashed #f5f5f9;
 }
 .app-brand .layout-menu-toggle i {
   color: #fff;
