@@ -1,0 +1,39 @@
+services:
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salescrm_app
+    working_dir: /var/www/html
+    volumes:
+      - ./:/var/www/html
+    ports:
+      - "8001:80"
+    depends_on:
+      - mysql
+
+  mysql:
+    image: mysql:8.0
+    container_name: salescrm_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: salescrm
+      MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+    volumes:
+      - salescrm_mysql_data:/var/lib/mysql
+    ports:
+      - "3311:3306"
+
+  phpmyadmin:
+    image: phpmyadmin:latest
+    container_name: salescrm_phpmyadmin
+    restart: unless-stopped
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+    ports:
+      - "8081:80"
+
+volumes:
+  salescrm_mysql_data:
