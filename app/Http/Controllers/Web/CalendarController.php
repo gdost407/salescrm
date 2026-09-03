@@ -24,7 +24,9 @@ class CalendarController extends Controller
         $start = $request->query('start');
         $end = $request->query('end');
 
-        $activities = LeadActivity::with('lead:id,name')
+        $activities = LeadActivity::with([
+            'lead:id,name,email,mobile,status,stage,source,assigned_to,address,country,state,city,pincode',
+        ])
             ->where('company_id', $user->company_id)
             ->whereIn('activity_type', ['followup', 'visit', 'gmeet'])
             ->whereNotNull('scheduled_at')
@@ -73,6 +75,16 @@ class CalendarController extends Controller
                     'summary' => $activity->summary,
                     'status' => $activity->status,
                     'scheduledAt' => $activity->scheduled_at->toIso8601String(),
+                    'leadEmail' => $activity->lead?->email,
+                    'leadMobile' => $activity->lead?->mobile,
+                    'leadStatus' => $activity->lead?->status,
+                    'leadStage' => $activity->lead?->stage,
+                    'leadSource' => $activity->lead?->source,
+                    'leadAddress' => $activity->lead?->address,
+                    'leadCountry' => $activity->lead?->country,
+                    'leadState' => $activity->lead?->state,
+                    'leadCity' => $activity->lead?->city,
+                    'leadPincode' => $activity->lead?->pincode,
                 ],
             ];
         });

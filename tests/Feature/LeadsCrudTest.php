@@ -7,6 +7,7 @@ use App\Models\LeadSetting;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 
 uses(RefreshDatabase::class);
 
@@ -54,6 +55,10 @@ test('lead form uses active company settings and users', function () {
         ->assertSee('name="stage"', false)
         ->assertSee('name="status"', false)
         ->assertSee('name="source"', false)
+        ->assertSee('Import leads')
+        ->assertSee('Download sample sheet')
+        ->assertSee(route('sales-leads.import'), false)
+        ->assertSee(route('sales-leads.import.sample'), false)
         ->assertSee($user->name);
 });
 
@@ -99,6 +104,81 @@ test('a user cannot modify another company lead', function () {
     $this->actingAs($user)->get(route('sales-leads.edit', $lead))->assertNotFound();
     $this->actingAs($user)->delete(route('sales-leads.destroy', $lead))->assertNotFound();
     $this->assertModelExists($lead);
+});
+
+test('lead list filters, paginates, and exports only the company leads', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
+    $otherCompany = Company::create(['name' => 'Other', 'slug' => 'other']);
+    $user = leadCrudUser($company);
+    $assignee = leadCrudUser($company);
+    LeadSetting::insert([
+        ['setting_type' => 'stage', 'name' => 'Qualification', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Open', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'source', 'name' => 'Referral', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+    ]);
+    Lead::create([
+        'company_id' => $company->id, 'created_by' => $user->id, 'assigned_to' => $assignee->id,
+        'name' => 'Matching Lead', 'email' => 'match@example.com', 'stage' => 'Qualification',
+        'status' => 'Open', 'source' => 'Referral', 'created_at' => now(), 'updated_at' => now(),
+    ]);
+    $oldLead = Lead::create([
+        'company_id' => $company->id, 'created_by' => $user->id, 'name' => 'Other Lead',
+        'stage' => 'Qualification', 'status' => 'Open', 'source' => 'Referral',
+    ]);
+    $oldLead->forceFill(['created_at' => now()->subMonths(6), 'updated_at' => now()->subMonths(6)])->saveQuietly();
+    Lead::create([
+        'company_id' => $otherCompany->id, 'name' => 'Private Matching Lead',
+        'stage' => 'Qualification', 'status' => 'Open', 'source' => 'Referral',
+    ]);
+
+    $this->actingAs($user)->get(route('sales-all-list', [
+        'search' => 'Matching', 'status' => 'Open', 'stage' => 'Qualification',
+        'source' => 'Referral', 'assigned_to' => $assignee->id, 'date_range' => 'year',
+    ]))->assertSuccessful()->assertSee('Matching Lead')->assertDontSee('Private Matching Lead')->assertDontSee('Other Lead');
+
+    $this->actingAs($user)->get(route('sales-all-list', [
+        'date_range' => 'custom', 'date_from' => now()->subDay()->toDateString(), 'date_to' => now()->toDateString(),
+    ]))->assertSuccessful()->assertSee('Matching Lead')->assertDontSee('Other Lead');
+
+    $exportResponse = $this->actingAs($user)->get(route('sales-leads.export', ['search' => 'Matching']))
+        ->assertSuccessful()
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+    expect($exportResponse->streamedContent())->toContain('Matching Lead')
+        ->not->toContain('Private Matching Lead');
+});
+
+test('a user can import leads from a CSV sample format', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
+    $user = leadCrudUser($company);
+    LeadSetting::insert([
+        ['setting_type' => 'stage', 'name' => 'Qualification', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Open', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'source', 'name' => 'Referral', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+    ]);
+
+    $csv = "name,email,mobile,job_title,deal_amount,stage,status,source,contact_person,priority\nImported Lead,imported@example.com,1234567890,Buyer,1000,Qualification,Open,Referral,{$user->name},high\n";
+
+    $this->actingAs($user)->post(route('sales-leads.import'), [
+        'file' => UploadedFile::fake()->createWithContent('leads.csv', $csv),
+    ])->assertRedirect(route('sales-all-list'));
+
+    $this->assertDatabaseHas('leads', [
+        'company_id' => $company->id, 'name' => 'Imported Lead', 'email' => 'imported@example.com',
+        'assigned_to' => $user->id, 'priority' => 'high',
+    ]);
+
+    $sampleResponse = $this->actingAs($user)->get(route('sales-leads.import.sample'))
+        ->assertSuccessful()
+        ->assertHeader('content-type', 'text/csv; charset=UTF-8');
+
+    expect($sampleResponse->streamedContent())->toContain('name,email,mobile');
+
+    $this->actingAs($user)->post(route('sales-leads.import'), [
+        'file' => UploadedFile::fake()->createWithContent('invalid.csv', "name,stage,status,source,contact_person\nInvalid Lead,Qualification,Open,Referral,Unknown User\n"),
+    ])->assertSessionHasErrors('file');
+
+    expect(Lead::query()->where('name', 'Invalid Lead')->exists())->toBeFalse();
 });
 
 test('a user can view a company lead with its details', function () {

@@ -69,35 +69,9 @@
           window.setTimeout(() => progress.classList.remove('is-complete'), 450);
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-          document.body.prepend(progress);
-
-          document.addEventListener('click', (event) => {
-            const link = event.target.closest('a[href]');
-
-            if (link && !event.defaultPrevented && link.target !== '_blank' && !link.hasAttribute('download') && link.origin === window.location.origin) {
-              start();
-            }
-          });
-
-          document.addEventListener('submit', (event) => {
-            if (!event.defaultPrevented) {
-              start();
-            }
-          });
-        });
-
-        window.addEventListener('beforeunload', start);
-        document.addEventListener('livewire:navigating', start);
-        document.addEventListener('livewire:navigated', finish);
-        document.addEventListener('page-loading-finished', finish);
-        document.addEventListener('livewire:init', () => {
-          Livewire.hook('request', ({ succeed, fail }) => {
-            start();
-            succeed(() => finish());
-            fail(() => finish());
-          });
-        });
+        start();
+        document.addEventListener('DOMContentLoaded', () => document.body.prepend(progress), { once: true });
+        window.addEventListener('load', finish, { once: true });
       })();
     </script>
 

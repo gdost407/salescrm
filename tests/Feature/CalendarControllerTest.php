@@ -55,7 +55,15 @@ test('authenticated users can visit the calendar page', function () {
         ->assertSuccessful()
         ->assertSee('id="mini-calendar"', false)
         ->assertSee('miniCalendarInstance', false)
-        ->assertSee('dateClick', false);
+        ->assertSee('dateClick', false)
+        ->assertSee('calendarDayModal', false)
+        ->assertSee('day-summary', false)
+        ->assertSee('Followup', false)
+        ->assertSee('Meet', false)
+        ->assertSee('calendar-record', false)
+        ->assertSee('calendarActivityModal', false)
+        ->assertSee('data-calendar-edit', false)
+        ->assertSee('data-calendar-complete', false);
 });
 
 // ------------------------------------------------------------------
@@ -96,7 +104,8 @@ test('calendar events includes followup activities with correct shape', function
             'followupType' => 'call',
             'leadName' => '364 Beat',
             'status' => 'pending',
-        ]);
+        ])
+        ->assertJsonFragment(['leadStatus' => 'Open', 'leadStage' => 'New', 'leadSource' => 'Direct']);
 });
 
 test('calendar events includes visit and gmeet activity types', function () {

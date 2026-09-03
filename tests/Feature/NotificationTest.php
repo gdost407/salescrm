@@ -12,7 +12,7 @@ function notificationTestUser(Company $company): User
     return User::factory()->for($company)->create(['is_active' => true]);
 }
 
-test('a due lead activity creates a notification for its responsible users', function () {
+test('a due lead activity creates a notification for its assigned user', function () {
     $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
     $user = notificationTestUser($company);
     $assignee = notificationTestUser($company);
@@ -32,11 +32,30 @@ test('a due lead activity creates a notification for its responsible users', fun
         'status' => 'pending',
     ]);
 
-    (new SendLeadActivityNotification($activity->id))->handle();
+    (new SendLeadActivityNotification($activity->id, 'at_time'))->handle();
 
-    expect(Notification::query()->where('activity_id', $activity->id)->count())->toBe(2);
+    expect(Notification::query()->where('activity_id', $activity->id)->count())->toBe(1);
     expect(Notification::query()->where('user_id', $assignee->id)->first()->data['url'])
         ->toBe(route('sales-lead-view', $lead));
+});
+
+test('a lead activity creates a ten minute reminder for its assigned user', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
+    $creator = notificationTestUser($company);
+    $assignee = notificationTestUser($company);
+    $lead = Lead::create(['company_id' => $company->id, 'created_by' => $creator->id, 'assigned_to' => $assignee->id, 'name' => 'Upcoming Lead']);
+    $activity = LeadActivity::create([
+        'company_id' => $company->id, 'lead_id' => $lead->id, 'user_id' => $creator->id,
+        'activity_type' => 'followup', 'followup_type' => 'call', 'subject' => 'Follow-up scheduled',
+        'scheduled_at' => now()->addMinutes(9), 'status' => 'pending',
+    ]);
+
+    (new SendLeadActivityNotification($activity->id, 'before'))->handle();
+
+    expect(Notification::query()->where('activity_id', $activity->id)->first())
+        ->user_id->toBe($assignee->id)
+        ->type->toBe('lead_activity_reminder_before')
+        ->title->toBe('Follow-up in 10 minutes');
 });
 
 test('a rescheduled activity cannot create its old reminder', function () {

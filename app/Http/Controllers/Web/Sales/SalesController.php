@@ -18,8 +18,10 @@ use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class SalesController extends Controller
 {
@@ -236,12 +238,198 @@ class SalesController extends Controller
      */
     public function allList(Request $request)
     {
-        $leads = Lead::query()
-            ->where('company_id', $request->user()->company_id)
-            ->latest()
-            ->get();
+        $filters = $this->leadListFilters($request);
+        $leads = $this->filteredLeads($request, $filters)->paginate(25)->withQueryString();
+        $filterOptions = $this->leadListOptions($request);
 
-        return view('app.sales.all-list', compact('leads'));
+        return view('app.sales.all-list', compact('leads', 'filters', 'filterOptions'));
+    }
+
+    public function exportLeads(Request $request)
+    {
+        $filters = $this->leadListFilters($request);
+        $leads = $this->filteredLeads($request, $filters)->get([
+            'name', 'email', 'mobile', 'job_title', 'deal_amount', 'stage', 'status', 'source', 'assigned_to', 'priority', 'created_at', 'last_activity_at',
+        ]);
+
+        return response()->streamDownload(function () use ($leads): void {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['Name', 'Email', 'Mobile', 'Job title', 'Deal amount', 'Stage', 'Status', 'Source', 'Contact person', 'Priority', 'Created at', 'Last activity']);
+
+            foreach ($leads as $lead) {
+                fputcsv($handle, [
+                    $lead->name, $lead->email, $lead->mobile, $lead->job_title, $lead->deal_amount,
+                    $lead->stage, $lead->status, $lead->source, $lead->assignee?->name, $lead->priority,
+                    $lead->created_at?->toDateTimeString(), $lead->last_activity_at?->toDateTimeString(),
+                ]);
+            }
+
+            fclose($handle);
+        }, 'leads-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    public function importLeads(Request $request): RedirectResponse
+    {
+        $request->validate([
+            'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
+        ]);
+
+        $handle = fopen($request->file('file')->getRealPath(), 'r');
+        $headers = fgetcsv($handle);
+        $headers = array_map(fn ($header) => Str::snake(trim((string) $header, " \t\n\r\0\x0B\xEF\xBB\xBF")), $headers ?: []);
+        $requiredHeaders = ['name', 'stage', 'status', 'source'];
+
+        if (count(array_diff($requiredHeaders, $headers)) > 0) {
+            fclose($handle);
+
+            throw ValidationException::withMessages(['file' => 'The CSV must include name, stage, status, and source columns.']);
+        }
+
+        $rows = [];
+        $rowNumber = 1;
+        while (($row = fgetcsv($handle)) !== false) {
+            $rowNumber++;
+            if (count(array_filter($row, fn ($value) => trim((string) $value) !== '')) === 0) {
+                continue;
+            }
+
+            $rows[] = ['number' => $rowNumber, 'data' => array_combine($headers, array_pad(array_slice($row, 0, count($headers)), count($headers), null))];
+        }
+        fclose($handle);
+
+        $companyId = (int) $request->user()->company_id;
+        $options = $this->leadListOptions($request);
+        $users = $options['users']->keyBy(fn ($user) => Str::lower($user->name));
+        $usersByEmail = $options['users']->filter(fn ($user) => $user->email)->keyBy(fn ($user) => Str::lower($user->email));
+        $errors = [];
+        $leads = [];
+
+        foreach ($rows as $row) {
+            $data = collect($row['data'])->map(fn ($value) => is_string($value) ? trim($value) : $value)->all();
+            $contactPerson = $data['contact_person'] ?? $data['assigned_to'] ?? null;
+            if ($contactPerson !== null && $contactPerson !== '') {
+                $contact = $usersByEmail->get(Str::lower($contactPerson)) ?? $users->get(Str::lower($contactPerson));
+                $data['assigned_to'] = $contact?->id;
+                if (! $contact) {
+                    $errors[] = "Row {$row['number']}: contact person does not match an active company user.";
+
+                    continue;
+                }
+            }
+
+            $validator = validator($data, [
+                'name' => ['required', 'string', 'max:255'], 'email' => ['nullable', 'email', 'max:255'],
+                'mobile' => ['nullable', 'string', 'max:30'], 'job_title' => ['nullable', 'string', 'max:255'],
+                'deal_amount' => ['nullable', 'numeric', 'min:0'], 'stage' => ['required', Rule::in($options['stages']->pluck('name')->all())],
+                'status' => ['required', Rule::in($options['statuses']->pluck('name')->all())], 'source' => ['required', Rule::in($options['sources']->pluck('name')->all())],
+                'assigned_to' => ['nullable', 'integer'], 'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'urgent'])],
+                'address' => ['nullable', 'string', 'max:65535'], 'country' => ['nullable', 'string', 'max:255'],
+                'state' => ['nullable', 'string', 'max:255'], 'city' => ['nullable', 'string', 'max:255'],
+                'pincode' => ['nullable', 'string', 'max:20'], 'description' => ['nullable', 'string', 'max:65535'],
+            ]);
+
+            if ($validator->fails()) {
+                $errors[] = "Row {$row['number']}: ".implode(' ', $validator->errors()->all());
+
+                continue;
+            }
+
+            $leads[] = $validator->validated() + ['company_id' => $companyId, 'created_by' => $request->user()->id];
+        }
+
+        if ($errors) {
+            return back()->withErrors(['file' => $errors]);
+        }
+
+        DB::transaction(fn () => collect($leads)->each(fn ($lead) => Lead::create($lead)));
+
+        return to_route('sales-all-list')->with('message', count($leads).' lead(s) imported successfully.');
+    }
+
+    public function downloadLeadImportSample()
+    {
+        return response()->streamDownload(function (): void {
+            $handle = fopen('php://output', 'w');
+            fputcsv($handle, ['name', 'email', 'mobile', 'job_title', 'deal_amount', 'stage', 'status', 'source', 'contact_person', 'priority', 'address', 'country', 'state', 'city', 'pincode', 'description']);
+            fputcsv($handle, ['Jane Lead', 'jane@example.com', '1234567890', 'Buyer', '2500.50', 'Qualification', 'Open', 'Referral', '', 'medium', '1 Main Street', 'India', 'Maharashtra', 'Pulgaon', '442302', 'Interested in the service']);
+            fclose($handle);
+        }, 'lead-import-sample.csv', ['Content-Type' => 'text/csv']);
+    }
+
+    private function filteredLeads(Request $request, array $filters)
+    {
+        return Lead::query()
+            ->where('company_id', $request->user()->company_id)
+            ->with('assignee:id,name')
+            ->when($filters['search'], function ($query, $search) {
+                $query->where(function ($query) use ($search) {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%")
+                        ->orWhere('mobile', 'like', "%{$search}%")
+                        ->orWhere('company_name', 'like', "%{$search}%");
+                });
+            })
+            ->when($filters['status'], fn ($query, $status) => $query->where('status', $status))
+            ->when($filters['stage'], fn ($query, $stage) => $query->where('stage', $stage))
+            ->when($filters['source'], fn ($query, $source) => $query->where('source', $source))
+            ->when($filters['assigned_to'], fn ($query, $assignedTo) => $query->where('assigned_to', $assignedTo))
+            ->when($filters['date_from'], fn ($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
+            ->when($filters['date_to'], fn ($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
+            ->latest();
+    }
+
+    private function leadListFilters(Request $request): array
+    {
+        $validated = $request->validate([
+            'search' => ['nullable', 'string', 'max:255'],
+            'date_range' => ['nullable', Rule::in(['today', 'week', 'month', '3_month', 'year', 'custom'])],
+            'date_from' => ['nullable', 'date'],
+            'date_to' => ['nullable', 'date', 'after_or_equal:date_from'],
+            'status' => ['nullable', 'string', 'max:255'],
+            'stage' => ['nullable', 'string', 'max:255'],
+            'source' => ['nullable', 'string', 'max:255'],
+            'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query->where('company_id', $request->user()->company_id))],
+        ]);
+        $range = $validated['date_range'] ?? null;
+        $dateFrom = $validated['date_from'] ?? null;
+        $dateTo = $validated['date_to'] ?? null;
+
+        if ($range && $range !== 'custom') {
+            $dateTo = now()->toDateString();
+            $dateFrom = match ($range) {
+                'today' => now()->toDateString(),
+                'week' => now()->startOfWeek()->toDateString(),
+                'month' => now()->startOfMonth()->toDateString(),
+                '3_month' => now()->subMonths(3)->toDateString(),
+                'year' => now()->startOfYear()->toDateString(),
+            };
+        }
+
+        return [
+            'search' => trim($validated['search'] ?? ''), 'date_range' => $range,
+            'date_from' => $dateFrom, 'date_to' => $dateTo,
+            'status' => $validated['status'] ?? '', 'stage' => $validated['stage'] ?? '',
+            'source' => $validated['source'] ?? '', 'assigned_to' => $validated['assigned_to'] ?? '',
+        ];
+    }
+
+    private function leadListOptions(Request $request): array
+    {
+        $companyId = $request->user()->company_id;
+        $settings = LeadSetting::query()
+            ->where('is_active', true)
+            ->where(function ($query) use ($companyId) {
+                $query->whereNull('company_id')->orWhere('company_id', $companyId);
+            })
+            ->whereIn('setting_type', ['stage', 'status', 'source'])
+            ->orderBy('sort_order')->orderBy('name')
+            ->get(['setting_type', 'name'])->groupBy('setting_type');
+        $users = User::query()->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(['id', 'name', 'email']);
+
+        return [
+            'stages' => $settings->get('stage', collect()), 'statuses' => $settings->get('status', collect()),
+            'sources' => $settings->get('source', collect()), 'users' => $users,
+        ];
     }
 
     private function leadFormData(Request $request, ?Lead $lead = null): array
@@ -495,7 +683,8 @@ class SalesController extends Controller
     private function queueLeadActivityNotification(LeadActivity $activity): void
     {
         if ($activity->scheduled_at && in_array($activity->activity_type, ['followup', 'visit', 'gmeet'], true)) {
-            SendLeadActivityNotification::dispatch($activity->id)->delay($activity->scheduled_at);
+            SendLeadActivityNotification::dispatch($activity->id, 'before')->delay($activity->scheduled_at->copy()->subMinutes(10));
+            SendLeadActivityNotification::dispatch($activity->id, 'at_time')->delay($activity->scheduled_at);
         }
     }
 }

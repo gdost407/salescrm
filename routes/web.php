@@ -2,8 +2,8 @@
 
 use App\Http\Controllers\Api\Webhook\LeadWebhookController;
 use App\Http\Controllers\NotificationController;
-use App\Http\Controllers\Web\Integration\ApiTokenController;
 use App\Http\Controllers\Web\CalendarController;
+use App\Http\Controllers\Web\Integration\ApiTokenController;
 use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
@@ -45,6 +45,9 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
         Route::get('leads/{lead}/edit', [SalesController::class, 'editLead'])->name('sales-leads.edit');
         Route::put('leads/{lead}', [SalesController::class, 'updateLead'])->name('sales-leads.update');
         Route::delete('leads/{lead}', [SalesController::class, 'destroyLead'])->name('sales-leads.destroy');
+        Route::post('leads/import', [SalesController::class, 'importLeads'])->name('sales-leads.import');
+        Route::get('leads/import/sample', [SalesController::class, 'downloadLeadImportSample'])->name('sales-leads.import.sample');
+        Route::get('leads/export', [SalesController::class, 'exportLeads'])->name('sales-leads.export');
         Route::post('leads/{lead}/activities', [SalesController::class, 'storeLeadActivity'])->name('sales-lead-activities.store');
         Route::put('leads/{lead}/activities/{activity}', [SalesController::class, 'updateLeadActivity'])->name('sales-lead-activities.update');
         Route::delete('leads/{lead}/activities/{activity}', [SalesController::class, 'destroyLeadActivity'])->name('sales-lead-activities.destroy');
