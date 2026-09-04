@@ -218,7 +218,7 @@
       <form action="{{ route('sales-leads.import') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="modal-body">
-          <p class="small text-body-secondary">Required columns: name, stage, status, source.</p>
+          <p class="small text-body-secondary">Required columns: name, email, mobile.</p>
           <input type="file" name="file" class="form-control" accept=".csv,.txt,text/csv" required>
           @if ($errors->has('file'))
             <div class="alert alert-danger mt-3 mb-0">

@@ -142,9 +142,9 @@
         }
 
         .mini-calendar td.selected span {
-            width: 45px;
-            height: 45px;
-            margin: -7px auto 0;
+            width: 30px;
+            height: 30px;
+            margin: auto;
 
             display: flex;
             align-items: center;
@@ -437,6 +437,60 @@
             display: contents;
         }
 
+        .mobile-calendar-agenda {
+            display: none;
+            padding: 8px 16px 24px;
+            background: #fff;
+        }
+
+        .mobile-agenda-day {
+            padding: 16px 0 8px;
+            border-bottom: 1px solid #e1e4e8;
+        }
+
+        .mobile-agenda-day:last-child {
+            border-bottom: 0;
+        }
+
+        .mobile-agenda-date {
+            margin-bottom: 8px;
+            color: #4f5d6b;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .mobile-agenda-event {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            padding: 10px 0;
+            border-top: 1px solid #f0f1f3;
+            cursor: pointer;
+        }
+
+        .mobile-agenda-time {
+            min-width: 62px;
+            color: #696cff;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .mobile-agenda-event-title {
+            color: #344251;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .mobile-agenda-event-summary {
+            display: -webkit-box;
+            overflow: hidden;
+            color: #788491;
+            font-size: 12px;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            line-clamp: 2;
+        }
+
         /* =========================
            RESPONSIVE
         ========================= */
@@ -474,6 +528,11 @@
 
         @media (max-width: 768px) {
 
+            .calendar-card {
+                height: auto;
+                overflow: visible;
+            }
+
             .calendar-wrapper {
                 display: block;
             }
@@ -488,7 +547,7 @@
             }
 
             .calendar-main {
-                height: 700px;
+                height: auto;
             }
 
             .calendar-header {
@@ -502,6 +561,14 @@
             .calendar-grid {
                 overflow-x: auto;
                 min-width: 850px;
+            }
+
+            .calendar-grid {
+                display: none;
+            }
+
+            .mobile-calendar-agenda {
+                display: block;
             }
         }
     </style>
@@ -592,6 +659,7 @@
           <div class="weekday">Sat</div>
           <div data-calendar-grid-days></div>
         </div>
+                <div class="mobile-calendar-agenda" data-mobile-calendar-agenda></div>
       </div>
     </div>
   </div>
@@ -633,6 +701,7 @@
     (() => {
         const calendarGrid = document.querySelector('[data-calendar-grid-days]');
         const miniGrid = document.querySelector('[data-calendar-mini-grid]');
+        const mobileAgenda = document.querySelector('[data-mobile-calendar-agenda]');
         const calendarTitle = document.querySelector('[data-calendar-title]');
         const miniTitle = document.querySelector('[data-calendar-mini-title]');
         const monthFormatter = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
@@ -655,6 +724,28 @@
         const visibleEventsForDate = (date) => state.events
             .filter((event) => event.start.slice(0, 10) === dateKey(date))
             .filter((event) => state.filters.has(event.extendedProps.activityType));
+
+        const renderMobileAgenda = () => {
+            const groupedEvents = new Map();
+            state.events.filter((event) => state.filters.has(event.extendedProps.activityType)).forEach((event) => {
+                const key = event.start.slice(0, 10);
+                if (!groupedEvents.has(key)) groupedEvents.set(key, []);
+                groupedEvents.get(key).push(event);
+            });
+
+            mobileAgenda.innerHTML = groupedEvents.size === 0
+                ? '<p class="text-center text-body-secondary py-4 mb-0">No scheduled events this month.</p>'
+                : [...groupedEvents.entries()].sort(([first], [second]) => first.localeCompare(second)).map(([key, events]) => {
+                    const date = new Date(`${key}T00:00:00`);
+                    events.sort((first, second) => new Date(first.start) - new Date(second.start));
+                    const eventMarkup = events.map((event) => {
+                        const props = event.extendedProps;
+                        const typeLabel = props.activityType === 'gmeet' ? 'Meet' : props.activityType === 'followup' ? 'Follow-up' : 'Visit';
+                        return `<div class="mobile-agenda-event" data-mobile-event="${escapeHtml(event.id)}"><span class="mobile-agenda-time">${escapeHtml(timeFormatter.format(new Date(event.start)))}</span><div class="min-w-0"><div class="mobile-agenda-event-title">${escapeHtml(props.leadName)} <span class="badge bg-label-primary ms-1">${typeLabel}</span></div><div class="small">${escapeHtml(props.subject || `${typeLabel} scheduled`)}</div><div class="mobile-agenda-event-summary">${escapeHtml(props.summary || 'No activity details added.')}</div></div></div>`;
+                    }).join('');
+                    return `<section class="mobile-agenda-day"><div class="mobile-agenda-date">${escapeHtml(new Intl.DateTimeFormat(undefined, { weekday: 'long', month: 'short', day: 'numeric' }).format(date))}</div>${eventMarkup}</section>`;
+                }).join('');
+        };
 
         const openDayModal = (date, dayEvents) => {
             const details = document.getElementById('calendar-day-details');
@@ -714,6 +805,15 @@
         };
 
         document.addEventListener('click', (clickEvent) => {
+            const mobileEvent = clickEvent.target.closest('[data-mobile-event]');
+            if (mobileEvent) {
+                const event = state.events.find((item) => String(item.id) === String(mobileEvent.dataset.mobileEvent));
+                if (event) {
+                    const date = new Date(`${event.start.slice(0, 10)}T00:00:00`);
+                    openDayModal(date, visibleEventsForDate(date));
+                }
+                return;
+            }
             const editButton = clickEvent.target.closest('[data-calendar-edit]');
             const completeButton = clickEvent.target.closest('[data-calendar-complete]');
             const eventId = editButton?.dataset.calendarEdit || completeButton?.dataset.calendarComplete;
@@ -778,6 +878,7 @@
             miniTitle.textContent = title;
             calendarGrid.innerHTML = '';
             miniGrid.innerHTML = '';
+            renderMobileAgenda();
 
             for (let index = 0; index < 42; index += 1) {
                 const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);

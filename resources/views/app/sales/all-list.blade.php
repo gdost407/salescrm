@@ -5,7 +5,7 @@
   <div class="card">
     <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2 py-3">
       <h5 class="mb-0">All Leads <span class="text-body-secondary fw-normal">({{ $leads->total() }})</span></h5>
-      <form action="{{ route('sales-all-list') }}" method="GET" class="d-flex flex-wrap align-items-center gap-2">
+      <form action="{{ route('sales-all-list') }}" method="GET" class="d-flex flex-wrap align-items-center gap-2" data-lead-search-form>
         <div class="input-group input-group-sm input-group-merge" style="max-width: 260px;">
           <span class="input-group-text"><i class="icon-base bx bx-search"></i></span>
           <input type="search" name="search" value="{{ $filters['search'] }}" class="form-control" placeholder="Search leads" aria-label="Search leads">
@@ -17,63 +17,8 @@
         <a href="{{ route('sales-create-lead') }}" class="btn btn-sm btn-primary" title="Create lead"><i class="icon-base bx bx-plus"></i></a>
       </form>
     </div>
-    <div class="card-body">
-      <div class="table-responsive">
-      <table class="table table-sm table-hover table-bordered align-middle mb-2 responsive-leads-table">
-        <thead>
-          <tr>
-            <th scope="col">#</th>
-            <th scope="col">Name</th>
-            <th scope="col">Email</th>
-            <th scope="col">Mobile</th>
-            <th scope="col">Title</th>
-            <th scope="col">Value</th>
-            <th scope="col">Stage</th>
-            <th scope="col">Status</th>
-            <th scope="col">Source</th>
-            <th scope="col">Assignee</th>
-            <th scope="col">Priority</th>
-            <th scope="col">Created</th>
-            <th scope="col">Activity</th>
-            <th scope="col">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          @forelse ($leads as $lead)
-            <tr>
-              <th scope="row" data-label="#">{{ $leads->firstItem() + $loop->index }}</th>
-              <td data-label="Full Name">{{ $lead->name }}</td>
-              <td data-label="Email" class="hide-in-mobile-card">{{ $lead->email ?: '-' }}</td>
-              <td data-label="Mobile Number">{{ $lead->mobile ?: '-' }}</td>
-              <td data-label="Job Title">{{ $lead->job_title ?: '-' }}</td>
-              <td data-label="Order Value">{{ $lead->deal_amount ?? '0.00' }}</td>
-              <td data-label="Lead Stage"><span class="badge bg-label-info">{{ $lead->stage ?: '-' }}</span></td>
-              <td data-label="Lead Status"><span class="badge bg-label-primary">{{ $lead->status ?: '-' }}</span></td>
-              <td data-label="Source">{{ $lead->source ?: '-' }}</td>
-              <td data-label="Contact Person">{{ $lead->assignee?->name ?: '-' }}</td>
-              <td data-label="Priority"><span class="badge bg-label-{{ $lead->priority === 'urgent' ? 'danger' : ($lead->priority === 'high' ? 'warning' : 'secondary') }}">{{ ucfirst($lead->priority ?: 'medium') }}</span></td>
-              <td data-label="Created">{{ $lead->created_at?->format('d M Y') ?: '-' }}</td>
-              <td data-label="Last Activity">{{ $lead->last_activity_at?->format('d M Y') ?: '-' }}</td>
-              <td data-label="Actions">
-                <a href="{{ route('sales-lead-view', $lead) }}" class="btn btn-xs btn-primary" title="View lead"><i class="bx bx-show"></i></a>
-                <a href="{{ route('sales-leads.edit', $lead) }}" class="btn btn-xs btn-primary" title="Edit lead"><i class="bx bx-edit"></i></a>
-                <form action="{{ route('sales-leads.destroy', $lead) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this lead?');">
-                  @csrf
-                  @method('DELETE')
-                  <button type="submit" class="btn btn-xs btn-danger" title="Delete lead"><i class="bx bx-trash"></i></button>
-                </form>
-              </td>
-            </tr>
-          @empty
-            <tr><td colspan="14" class="text-center">No leads found.</td></tr>
-          @endforelse
-        </tbody>
-      </table>
-      </div>
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 pt-2">
-        <small class="text-body-secondary">Showing {{ $leads->firstItem() ?? 0 }} to {{ $leads->lastItem() ?? 0 }} of {{ $leads->total() }}</small>
-        {{ $leads->onEachSide(1)->links() }}
-      </div>
+    <div id="lead-results">
+      @include('app.sales.partials.lead-results', compact('leads'))
     </div>
   </div>
 </div>
@@ -173,7 +118,7 @@
       <form action="{{ route('sales-leads.import') }}" method="POST" enctype="multipart/form-data">
         @csrf
         <div class="modal-body">
-          <p class="small text-body-secondary">Upload a CSV exported from Excel or Google Sheets. Required columns: name, stage, status, source.</p>
+          <p class="small text-body-secondary">Upload a CSV exported from Excel or Google Sheets. Required columns: name, email, mobile.</p>
           <a href="{{ route('sales-leads.import.sample') }}" data-no-progress class="btn btn-sm btn-outline-secondary mb-3"><i class="bx bx-download me-1"></i>Download sample sheet</a>
           <input type="file" name="file" class="form-control" accept=".csv,.txt,text/csv" required>
           @if ($errors->has('file'))
@@ -196,6 +141,47 @@
 @push('scripts')
 <script>
   document.addEventListener('DOMContentLoaded', () => {
+    const searchForm = $('[data-lead-search-form]');
+    const results = $('#lead-results');
+    const heading = $('.card-header h5');
+
+    const loadLeads = (url, query = searchForm.serialize()) => {
+      const button = searchForm.find('button[type="submit"]');
+      button.prop('disabled', true);
+      results.css('opacity', '0.55');
+      const requestUrl = new URL(url, window.location.origin);
+      requestUrl.search = query;
+
+      $.ajax({
+        url: requestUrl.toString(),
+        method: 'GET',
+        data: searchForm.serialize(),
+        dataType: 'json',
+        headers: { Accept: 'application/json' },
+        success: (response) => {
+          results.html(response.html);
+          heading.find('span').text(`(${response.count})`);
+          window.history.replaceState({}, '', `${requestUrl.pathname}${requestUrl.search}`);
+        },
+        error: () => window.alert('Unable to load leads.'),
+        complete: () => {
+          button.prop('disabled', false);
+          results.css('opacity', '');
+        },
+      });
+    };
+
+    searchForm.on('submit', (event) => {
+      event.preventDefault();
+      loadLeads(searchForm.attr('action'));
+    });
+
+    results.on('click', '.pagination a', function (event) {
+      event.preventDefault();
+      const url = new URL(this.href);
+      loadLeads(url.pathname, url.search);
+    });
+
     const dateRange = document.getElementById('date_range');
     const customDateRange = document.getElementById('custom-date-range');
 

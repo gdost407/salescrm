@@ -21,6 +21,7 @@
     <div class="layout-overlay layout-menu-toggle"></div>
   </div>
   <div id="app-notifications" class="position-fixed top-0 end-0 p-3" style="z-index: 1080; width: min(380px, 100%);"></div>
+  @include('partials.submit-lock')
   <script>
     (() => {
       const shown = new Set();

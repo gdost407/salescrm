@@ -128,5 +128,6 @@
         {{ $slot }}
 
         @fluxScripts
+        @include('partials.submit-lock')
     </body>
 </html>

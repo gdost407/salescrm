@@ -38,8 +38,10 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
     // Sales Routes
     Route::prefix('sales')->group(function () {
         Route::get('kanban', [SalesController::class, 'kanban'])->name('sale-kanban');
+        Route::get('leads/kanban-data', [SalesController::class, 'kanbanLeads'])->name('sales-leads.kanban-data');
         Route::patch('leads/{lead}/status', [SalesController::class, 'updateKanbanStatus'])->name('sales-leads.status');
         Route::get('leads/{lead}/kanban-details', [SalesController::class, 'kanbanLeadDetails'])->name('sales-leads.kanban-details');
+        Route::patch('leads/{lead}/assignee', [SalesController::class, 'assignKanbanLead'])->name('sales-leads.assignee');
         Route::get('create-lead', [SalesController::class, 'createLead'])->name('sales-create-lead');
         Route::post('create-lead', [SalesController::class, 'storeLead'])->name('sales-leads.store');
         Route::get('leads/{lead}/edit', [SalesController::class, 'editLead'])->name('sales-leads.edit');

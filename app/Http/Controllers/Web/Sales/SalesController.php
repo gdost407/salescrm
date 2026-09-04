@@ -15,6 +15,7 @@ use App\Models\LeadAttachment;
 use App\Models\LeadSetting;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -28,9 +29,9 @@ class SalesController extends Controller
     /**
      * Show the sales kanban board.
      */
-    public function kanban()
+    public function kanban(Request $request)
     {
-        $companyId = request()->user()->company_id;
+        $companyId = $request->user()->company_id;
         $statuses = LeadSetting::query()
             ->where('setting_type', 'status')
             ->where('is_active', true)
@@ -40,10 +41,49 @@ class SalesController extends Controller
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name');
-        $leads = Lead::query()->where('company_id', $companyId)->with('assignee:id,name')->latest()->get();
-        $formData = $this->leadFormData(request());
+        $filters = $this->leadListFilters($request);
+        $leadCounts = $this->filteredLeads($request, $filters)
+            ->reorder()
+            ->selectRaw('status, COUNT(*) as total')
+            ->groupBy('status')
+            ->pluck('total', 'status');
+        $formData = $this->leadFormData($request);
+        $filterOptions = $this->leadListOptions($request);
 
-        return view('app.sales.kanban', compact('leads', 'statuses') + $formData);
+        return view('app.sales.kanban', compact('statuses', 'filters', 'leadCounts', 'filterOptions') + $formData);
+    }
+
+    public function kanbanLeads(Request $request): JsonResponse
+    {
+        $request->validate([
+            'status' => ['required', 'string'],
+            'page' => ['nullable', 'integer', 'min:1'],
+        ]);
+        $filters = $this->leadListFilters($request);
+        $kanbanUsers = User::query()->where('company_id', $request->user()->company_id)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
+        $leads = $this->filteredLeads($request, $filters)
+            ->where('status', $request->string('status'))
+            ->with(['activities' => fn ($query) => $query->latest()->limit(1)])
+            ->paginate(20, ['*'], 'page', $request->integer('page', 1));
+
+        return response()->json([
+            'html' => view('components.sales.kanban-cards', compact('leads', 'kanbanUsers'))->render(),
+            'nextPage' => $leads->nextPageUrl() ? $leads->currentPage() + 1 : null,
+            'total' => $leads->total(),
+        ]);
+    }
+
+    public function assignKanbanLead(Request $request, Lead $lead): JsonResponse
+    {
+        $this->ensureLeadBelongsToUserCompany($request, $lead);
+        $validated = $request->validate([
+            'assigned_to' => ['nullable', 'integer', Rule::exists('users', 'id')->where(fn ($query) => $query
+                ->where('company_id', $request->user()->company_id)->where('is_active', true))],
+        ]);
+        $lead->update(['assigned_to' => $validated['assigned_to'] ?? null]);
+        $lead->load('assignee:id,name');
+
+        return response()->json(['message' => 'Lead assignment updated.', 'assignee' => $lead->assignee?->name]);
     }
 
     public function updateKanbanStatus(Request $request, Lead $lead): JsonResponse
@@ -86,12 +126,13 @@ class SalesController extends Controller
         $this->recordLeadEvent($lead, $request->user()->id, 'Lead created', 'Lead was created.');
 
         if ($request->expectsJson()) {
-            $lead->load('assignee:id,name');
+            $lead->load(['assignee:id,name', 'activities' => fn ($query) => $query->latest()->limit(1)]);
+            $kanbanUsers = User::query()->where('company_id', $request->user()->company_id)->where('is_active', true)->orderBy('name')->get(['id', 'name']);
 
             return response()->json([
                 'message' => 'Lead created successfully!',
                 'status' => $lead->status,
-                'html' => view('components.sales.kanban-card', compact('lead'))->render(),
+                'html' => view('components.sales.kanban-card', compact('lead', 'kanbanUsers'))->render(),
             ], 201);
         }
 
@@ -242,6 +283,13 @@ class SalesController extends Controller
         $leads = $this->filteredLeads($request, $filters)->paginate(25)->withQueryString();
         $filterOptions = $this->leadListOptions($request);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'html' => view('app.sales.partials.lead-results', compact('leads'))->render(),
+                'count' => $leads->total(),
+            ]);
+        }
+
         return view('app.sales.all-list', compact('leads', 'filters', 'filterOptions'));
     }
 
@@ -268,7 +316,7 @@ class SalesController extends Controller
         }, 'leads-'.now()->format('Y-m-d').'.csv', ['Content-Type' => 'text/csv']);
     }
 
-    public function importLeads(Request $request): RedirectResponse
+    public function importLeads(Request $request): View
     {
         $request->validate([
             'file' => ['required', 'file', 'mimes:csv,txt', 'max:5120'],
@@ -277,12 +325,12 @@ class SalesController extends Controller
         $handle = fopen($request->file('file')->getRealPath(), 'r');
         $headers = fgetcsv($handle);
         $headers = array_map(fn ($header) => Str::snake(trim((string) $header, " \t\n\r\0\x0B\xEF\xBB\xBF")), $headers ?: []);
-        $requiredHeaders = ['name', 'stage', 'status', 'source'];
+        $requiredHeaders = ['name', 'email', 'mobile'];
 
         if (count(array_diff($requiredHeaders, $headers)) > 0) {
             fclose($handle);
 
-            throw ValidationException::withMessages(['file' => 'The CSV must include name, stage, status, and source columns.']);
+            throw ValidationException::withMessages(['file' => 'The CSV must include name, email, and mobile columns.']);
         }
 
         $rows = [];
@@ -299,59 +347,116 @@ class SalesController extends Controller
 
         $companyId = (int) $request->user()->company_id;
         $options = $this->leadListOptions($request);
-        $users = $options['users']->keyBy(fn ($user) => Str::lower($user->name));
-        $usersByEmail = $options['users']->filter(fn ($user) => $user->email)->keyBy(fn ($user) => Str::lower($user->email));
-        $errors = [];
+        $existingContacts = Lead::query()
+            ->where('company_id', $companyId)
+            ->where(function ($query) {
+                $query->whereNotNull('email')->orWhereNotNull('mobile');
+            })
+            ->get(['email', 'mobile']);
+        $existingEmails = $existingContacts->pluck('email')->filter()->mapWithKeys(fn ($email) => [Str::lower(trim($email)) => true]);
+        $existingMobiles = $existingContacts->pluck('mobile')->filter()->mapWithKeys(fn ($mobile) => [trim($mobile) => true]);
+        $failedRows = [];
+        $duplicateRows = [];
         $leads = [];
+        $resultColumns = [
+            'name' => 'Name', 'email' => 'Email', 'mobile' => 'Mobile', 'job_title' => 'Job title',
+            'deal_amount' => 'Deal amount', 'stage' => 'Stage', 'status' => 'Lead status',
+            'source' => 'Source', 'priority' => 'Priority', 'address' => 'Address',
+            'country' => 'Country', 'state' => 'State', 'city' => 'City', 'pincode' => 'Pincode',
+            'description' => 'Description',
+        ];
+        $skippedDuplicates = 0;
+        $skippedInvalid = 0;
+        $importedEmails = [];
+        $importedMobiles = [];
 
         foreach ($rows as $row) {
             $data = collect($row['data'])->map(fn ($value) => is_string($value) ? trim($value) : $value)->all();
-            $contactPerson = $data['contact_person'] ?? $data['assigned_to'] ?? null;
-            if ($contactPerson !== null && $contactPerson !== '') {
-                $contact = $usersByEmail->get(Str::lower($contactPerson)) ?? $users->get(Str::lower($contactPerson));
-                $data['assigned_to'] = $contact?->id;
-                if (! $contact) {
-                    $errors[] = "Row {$row['number']}: contact person does not match an active company user.";
-
-                    continue;
-                }
-            }
+            $data['deal_amount'] = blank($data['deal_amount'] ?? null) ? 0 : $data['deal_amount'];
+            $data['stage'] = blank($data['stage'] ?? null) ? 'New' : $data['stage'];
+            $data['status'] = blank($data['status'] ?? null) ? 'New' : $data['status'];
+            $data['source'] = blank($data['source'] ?? null) ? 'Self' : $data['source'];
+            $data['priority'] = blank($data['priority'] ?? null) ? 'low' : $data['priority'];
+            $data['assigned_to'] = $request->user()->id;
 
             $validator = validator($data, [
-                'name' => ['required', 'string', 'max:255'], 'email' => ['nullable', 'email', 'max:255'],
-                'mobile' => ['nullable', 'string', 'max:30'], 'job_title' => ['nullable', 'string', 'max:255'],
-                'deal_amount' => ['nullable', 'numeric', 'min:0'], 'stage' => ['required', Rule::in($options['stages']->pluck('name')->all())],
-                'status' => ['required', Rule::in($options['statuses']->pluck('name')->all())], 'source' => ['required', Rule::in($options['sources']->pluck('name')->all())],
-                'assigned_to' => ['nullable', 'integer'], 'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'urgent'])],
-                'address' => ['nullable', 'string', 'max:65535'], 'country' => ['nullable', 'string', 'max:255'],
-                'state' => ['nullable', 'string', 'max:255'], 'city' => ['nullable', 'string', 'max:255'],
-                'pincode' => ['nullable', 'string', 'max:20'], 'description' => ['nullable', 'string', 'max:65535'],
+                'name' => ['required', 'string', 'max:255'],
+                'email' => ['required', 'email:rfc', 'max:255'],
+                'mobile' => ['required', 'string', 'regex:/^\+?[0-9]+$/', 'max:30'],
+                'job_title' => ['nullable', 'string', 'max:255'],
+                'deal_amount' => ['nullable', 'numeric', 'min:0'],
+                'stage' => ['required', Rule::in($options['stages']->pluck('name')->all())],
+                'status' => ['required', Rule::in($options['statuses']->pluck('name')->all())],
+                'source' => ['required', Rule::in($options['sources']->pluck('name')->all())],
+                'assigned_to' => ['nullable', 'integer'],
+                'priority' => ['nullable', Rule::in(['low', 'medium', 'high', 'urgent'])],
+                'address' => ['nullable', 'string', 'max:65535'],
+                'country' => ['nullable', 'string', 'max:255'],
+                'state' => ['nullable', 'string', 'max:255'],
+                'city' => ['nullable', 'string', 'max:255'],
+                'pincode' => ['nullable', 'string', 'max:20'],
+                'description' => ['nullable', 'string', 'max:65535'],
             ]);
 
             if ($validator->fails()) {
-                $errors[] = "Row {$row['number']}: ".implode(' ', $validator->errors()->all());
+                $reason = implode(' ', $validator->errors()->all());
+                $failedRows[] = [
+                    'row' => $row['number'],
+                    'status' => 'Failed',
+                    'reason' => $reason,
+                    'data' => collect($data)->only(array_keys($resultColumns))->all(),
+                ];
+                $skippedInvalid++;
 
                 continue;
             }
 
-            $leads[] = $validator->validated() + ['company_id' => $companyId, 'created_by' => $request->user()->id];
-        }
+            $validated = $validator->validated();
+            $email = Str::lower(trim($validated['email']));
+            $mobile = trim($validated['mobile']);
 
-        if ($errors) {
-            return back()->withErrors(['file' => $errors]);
+            if ($existingEmails->has($email) || $existingMobiles->has($mobile) || isset($importedEmails[$email]) || isset($importedMobiles[$mobile])) {
+                $duplicateFields = [];
+                if ($existingEmails->has($email) || isset($importedEmails[$email])) {
+                    $duplicateFields[] = 'email';
+                }
+                if ($existingMobiles->has($mobile) || isset($importedMobiles[$mobile])) {
+                    $duplicateFields[] = 'mobile';
+                }
+                $duplicateRows[] = [
+                    'row' => $row['number'],
+                    'status' => 'Skipped',
+                    'reason' => 'Duplicate '.implode(' and ', $duplicateFields).' in this company or import file.',
+                    'data' => collect($validated)->only(array_keys($resultColumns))->all(),
+                ];
+                $skippedDuplicates++;
+
+                continue;
+            }
+
+            $importedEmails[$email] = true;
+            $importedMobiles[$mobile] = true;
+            $leads[] = $validated + ['company_id' => $companyId, 'created_by' => $request->user()->id];
         }
 
         DB::transaction(fn () => collect($leads)->each(fn ($lead) => Lead::create($lead)));
 
-        return to_route('sales-all-list')->with('message', count($leads).' lead(s) imported successfully.');
+        return view('app.sales.import-result', [
+            'importedCount' => count($leads),
+            'skippedDuplicates' => $skippedDuplicates,
+            'skippedInvalid' => $skippedInvalid,
+            'failedRows' => $failedRows,
+            'duplicateRows' => $duplicateRows,
+            'resultColumns' => $resultColumns,
+        ]);
     }
 
     public function downloadLeadImportSample()
     {
         return response()->streamDownload(function (): void {
             $handle = fopen('php://output', 'w');
-            fputcsv($handle, ['name', 'email', 'mobile', 'job_title', 'deal_amount', 'stage', 'status', 'source', 'contact_person', 'priority', 'address', 'country', 'state', 'city', 'pincode', 'description']);
-            fputcsv($handle, ['Jane Lead', 'jane@example.com', '1234567890', 'Buyer', '2500.50', 'Qualification', 'Open', 'Referral', '', 'medium', '1 Main Street', 'India', 'Maharashtra', 'Pulgaon', '442302', 'Interested in the service']);
+            fputcsv($handle, ['name', 'email', 'mobile', 'job_title', 'deal_amount', 'stage', 'status', 'source', 'priority', 'address', 'country', 'state', 'city', 'pincode', 'description']);
+            fputcsv($handle, ['Jane Lead', 'jane@example.com', '1234567890', 'Buyer', '2500.50', 'Qualification', 'Open', 'Referral', 'medium', '1 Main Street', 'India', 'Maharashtra', 'Pulgaon', '442302', 'Interested in the service']);
             fclose($handle);
         }, 'lead-import-sample.csv', ['Content-Type' => 'text/csv']);
     }

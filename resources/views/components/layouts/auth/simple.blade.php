@@ -18,5 +18,6 @@
             </div>
         </div>
         @fluxScripts
+        @include('partials.submit-lock')
     </body>
 </html>

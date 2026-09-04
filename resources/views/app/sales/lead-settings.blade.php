@@ -121,10 +121,12 @@
     });
 
     if (response.ok) {
+      window.unlockFormSubmit(leadSettingForm);
       window.location.reload();
       return;
     }
 
+    window.unlockFormSubmit(leadSettingForm);
     const data = await response.json().catch(() => ({}));
     alert(Object.values(data.errors ?? {}).flat().join('\n') || 'Unable to save the setting.');
   });
@@ -141,6 +143,7 @@
       if (response.ok) {
         window.location.reload();
       } else {
+        window.unlockFormSubmit(form);
         alert('Unable to delete the setting.');
       }
     });
