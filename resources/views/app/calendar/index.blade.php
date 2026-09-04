@@ -38,14 +38,14 @@
             width: 371px;
             min-width: 371px;
             height: 100%;
-            border-right: 1px solid #e1e4e8;
+            border-right: 1px dashed #e1e4e8;
             background: #fff;
         }
 
         .add-event-wrapper {
             height: 106px;
             padding: 28px 29px;
-            border-bottom: 1px solid #e1e4e8;
+            border-bottom: 1px dashed #e1e4e8;
         }
 
         .btn-add-event {
@@ -83,7 +83,7 @@
         .mini-calendar-wrapper {
             height: 430px;
             padding: 27px 27px 20px;
-            border-bottom: 1px solid #e1e4e8;
+            border-bottom: 1px dashed #e1e4e8;
         }
 
         .mini-calendar-title {
@@ -230,7 +230,7 @@
 
         .calendar-header {
             height: 105px;
-            border-bottom: 1px solid #e1e4e8;
+            border-bottom: 1px dashed #e1e4e8;
 
             display: flex;
             align-items: center;
@@ -286,7 +286,7 @@
             min-width: 81px;
 
             border: 0;
-            border-right: 1px solid #d8d8fa;
+            border-right: 1px dashed #d8d8fa;
             border-radius: 0;
 
             background: #e9e9ff;
@@ -332,8 +332,8 @@
             align-items: center;
             justify-content: center;
 
-            border-right: 1px solid #e0e3e7;
-            border-bottom: 1px solid #e0e3e7;
+            border-right: 1px dashed #e0e3e7;
+            border-bottom: 1px dashed #e0e3e7;
 
             font-size: 18px;
             font-weight: 400;
@@ -353,8 +353,8 @@
             min-width: 0;
             min-height: 0;
 
-            border-right: 1px solid #e0e3e7;
-            border-bottom: 1px solid #e0e3e7;
+            border-right: 1px dashed #e0e3e7;
+            border-bottom: 1px dashed #e0e3e7;
 
             background: #fff;
             overflow: hidden;
@@ -407,7 +407,7 @@
 
         .calendar-record {
             padding: 9px 0;
-            border-bottom: 1px solid #e1e4e8;
+            border-bottom: 1px dashed #e1e4e8;
         }
 
         .calendar-record:last-child {
@@ -445,7 +445,7 @@
 
         .mobile-agenda-day {
             padding: 16px 0 8px;
-            border-bottom: 1px solid #e1e4e8;
+            border-bottom: 1px dashed #e1e4e8;
         }
 
         .mobile-agenda-day:last-child {
@@ -464,7 +464,7 @@
             align-items: flex-start;
             gap: 10px;
             padding: 10px 0;
-            border-top: 1px solid #f0f1f3;
+            border-top: 1px dashed #f0f1f3;
             cursor: pointer;
         }
 
