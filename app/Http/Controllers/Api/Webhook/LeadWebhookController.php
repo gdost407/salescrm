@@ -73,20 +73,80 @@ class LeadWebhookController extends Controller
         }
 
         $validated = $validator->validated();
+        $email = Str::lower(trim((string) ($validated['email'] ?? '')));
+        $mobile = trim((string) ($validated['mobile'] ?? ''));
+        $hasEmail = $email !== '';
+        $hasMobile = $mobile !== '';
 
-        $defaultStatus = LeadSetting::query()
-            ->where('company_id', $company->id)
-            ->where('setting_type', 'status')
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('name') ?? 'New';
+        $duplicateLead = ($hasEmail || $hasMobile)
+            ? Lead::query()
+                ->where('company_id', $company->id)
+                ->where(function ($query) use ($email, $mobile, $hasEmail): void {
+                    if ($hasEmail) {
+                        $query->whereRaw('LOWER(email) = ?', [$email]);
+                    }
 
-        $defaultStage = LeadSetting::query()
-            ->where('company_id', $company->id)
-            ->where('setting_type', 'stage')
-            ->where('is_active', true)
-            ->orderBy('sort_order')
-            ->value('name') ?? 'New';
+                    if ($mobile !== '') {
+                        $hasEmail ? $query->orWhere('mobile', $mobile) : $query->where('mobile', $mobile);
+                    }
+                })
+                ->first()
+            : null;
+
+        if ($duplicateLead) {
+            $duplicateFields = [];
+
+            if ($hasEmail && Lead::query()
+                ->whereKey($duplicateLead->id)
+                ->whereRaw('LOWER(email) = ?', [$email])
+                ->exists()) {
+                $duplicateFields[] = 'email';
+            }
+
+            if ($hasMobile && $duplicateLead->mobile === $mobile) {
+                $duplicateFields[] = 'mobile';
+            }
+
+            $errorResponse = [
+                'success' => false,
+                'message' => 'Duplicate lead.',
+                'errors' => [
+                    'duplicate' => ['A lead with the same '.implode(' or ', $duplicateFields).' already exists.'],
+                ],
+            ];
+
+            WebhookLog::create([
+                'company_id' => $company->id,
+                'integration_id' => $integration->id,
+                'event' => 'lead.create',
+                'request_id' => $requestId,
+                'payload' => $request->all(),
+                'response' => $errorResponse,
+                'status_code' => 422,
+                'status' => 'failed',
+                'error_message' => 'Duplicate lead: '.implode(' or ', $duplicateFields),
+                'received_at' => $startTime,
+                'processed_at' => now(),
+            ]);
+
+            return response()->json($errorResponse, 422);
+        }
+
+        // $defaultStatus = LeadSetting::query()
+        //     ->where('company_id', $company->id)
+        //     ->where('setting_type', 'status')
+        //     ->where('is_active', true)
+        //     ->orderBy('sort_order')
+        //     ->value('name') ?? 'New';
+        $defaultStatus = 'New';
+
+        // $defaultStage = LeadSetting::query()
+        //     ->where('company_id', $company->id)
+        //     ->where('setting_type', 'stage')
+        //     ->where('is_active', true)
+        //     ->orderBy('sort_order')
+        //     ->value('name') ?? 'New';
+        $defaultStage = 'New';
 
         $lead = Lead::create([
             'company_id' => $company->id,

@@ -2,6 +2,7 @@
 
 use App\Models\Company;
 use App\Models\Integration;
+use App\Models\Lead;
 
 test('webhook lead creation fails when token is missing', function () {
     $response = $this->postJson(route('webhook.v1.lead.create'), [
@@ -124,6 +125,46 @@ test('webhook lead creation accepts token via X-API-Token header', function () {
     $this->assertDatabaseHas('leads', [
         'company_id' => $company->id,
         'name' => 'Bob Johnson',
+    ]);
+});
+
+test('webhook lead creation rejects a duplicate email or mobile in the same company', function () {
+    $company = Company::create(['name' => 'Duplicate Corp', 'slug' => 'duplicate-corp']);
+    $token = 'crm_duplicate_token_test_123';
+    Integration::create([
+        'company_id' => $company->id,
+        'name' => 'Webhook API Token',
+        'type' => 'webhook',
+        'api_key' => hash('sha256', $token),
+        'status' => true,
+    ]);
+    $payload = [
+        'name' => 'Duplicate Lead',
+        'email' => 'duplicate@example.com',
+        'mobile' => '+1234567890',
+    ];
+
+    $this->postJson(route('webhook.v1.lead.create'), $payload, [
+        'Authorization' => 'Bearer '.$token,
+    ])->assertCreated();
+
+    $duplicateResponse = $this->postJson(route('webhook.v1.lead.create'), $payload, [
+        'Authorization' => 'Bearer '.$token,
+    ]);
+
+    $duplicateResponse->assertStatus(422)
+        ->assertJson([
+            'success' => false,
+            'message' => 'Duplicate lead.',
+        ])
+        ->assertJsonPath('errors.duplicate.0', 'A lead with the same email or mobile already exists.');
+
+    expect(Lead::query()->where('company_id', $company->id)->count())->toBe(1);
+    $this->assertDatabaseHas('webhook_logs', [
+        'company_id' => $company->id,
+        'event' => 'lead.create',
+        'status_code' => 422,
+        'status' => 'failed',
     ]);
 });
 
