@@ -1,3 +1,24 @@
+window.appAjax = {
+    async get(url, params = {}) {
+        const query = new URLSearchParams(params).toString();
+        const response = await fetch(query ? `${url}?${query}` : url, {
+            credentials: 'same-origin',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        });
+
+        const payload = await response.json();
+
+        if (!response.ok || payload.success === false) {
+            throw new Error(payload.message || 'Request failed.');
+        }
+
+        return payload.data;
+    },
+};
+
 async function copyTextToClipboard(text) {
     if (navigator.clipboard && window.isSecureContext) {
         try {

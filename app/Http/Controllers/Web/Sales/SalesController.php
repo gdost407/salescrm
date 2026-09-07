@@ -8,11 +8,14 @@ use App\Http\Requests\StoreLeadActivityRequest;
 use App\Http\Requests\StoreLeadRequest;
 use App\Http\Requests\UpdateLeadRequest;
 use App\Jobs\SendLeadActivityNotification;
+use App\Models\City;
 use App\Models\Company;
+use App\Models\Country;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadAttachment;
 use App\Models\LeadSetting;
+use App\Models\State;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Contracts\View\View;
@@ -113,6 +116,48 @@ class SalesController extends Controller
     public function createLead(Request $request)
     {
         return view('app.sales.create-lead', $this->leadFormData($request));
+    }
+
+    public function locationCountries(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'data' => Country::query()->orderBy('name')->get(['name']),
+        ]);
+    }
+
+    public function locationStates(Request $request): JsonResponse
+    {
+        $country = $request->validate([
+            'country' => ['required', 'string', 'exists:countries,name'],
+        ])['country'];
+
+        return response()->json([
+            'success' => true,
+            'data' => State::query()
+                ->whereHas('country', fn ($query) => $query->where('name', $country))
+                ->orderBy('name')
+                ->get(['name']),
+        ]);
+    }
+
+    public function locationCities(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'country' => ['required', 'string', 'exists:countries,name'],
+            'state' => ['required', 'string', 'exists:states,name'],
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'data' => City::query()
+                ->whereHas('state', function ($query) use ($validated): void {
+                    $query->where('name', $validated['state'])
+                        ->whereHas('country', fn ($countryQuery) => $countryQuery->where('name', $validated['country']));
+                })
+                ->orderBy('name')
+                ->get(['name']),
+        ]);
     }
 
     /**
@@ -554,8 +599,9 @@ class SalesController extends Controller
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name']);
+        $countries = Country::query()->orderBy('name')->get(['id', 'name']);
 
-        return compact('lead', 'settings', 'users');
+        return compact('lead', 'settings', 'users', 'countries');
     }
 
     private function ensureCompany(Request $request): int

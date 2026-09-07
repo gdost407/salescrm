@@ -29,6 +29,9 @@ Route::view('dashboard', 'dashboard')
 Route::middleware('auth')->group(function () {
     Route::get('notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
     Route::patch('notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
+    Route::get('locations/countries', [SalesController::class, 'locationCountries'])->name('locations.countries');
+    Route::get('locations/states', [SalesController::class, 'locationStates'])->name('locations.states');
+    Route::get('locations/cities', [SalesController::class, 'locationCities'])->name('locations.cities');
     Volt::route('company/onboarding', 'company.onboarding')->name('company.onboarding');
 });
 

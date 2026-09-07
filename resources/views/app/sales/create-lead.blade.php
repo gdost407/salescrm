@@ -123,33 +123,33 @@
           </div>
           <div class="col-sm-3">
             <div class="mb-6">
-              <label class="form-label" for="basic-icon-default-fullname">Country</label>
+              <label class="form-label" for="leadCountry">Country</label>
               <div class="input-group input-group-merge">
                 <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-globe"></i></span>
-                <select name="country" class="form-select" id="exampleFormControlSelect1" aria-label="Country">
-                  <option value="India" @selected(old('country', $lead?->country ?? 'India') === 'India')>India</option>
+                <select name="country" class="form-select location-select" id="leadCountry" data-placeholder="Select country" aria-label="Country">
+                  <option value="">Loading countries...</option>
                 </select>
               </div>
             </div>
           </div>
           <div class="col-sm-3">
             <div class="mb-6">
-              <label class="form-label" for="basic-icon-default-fullname">State</label>
+              <label class="form-label" for="leadState">State</label>
               <div class="input-group input-group-merge">
                 <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-map"></i></span>
-                <select name="state" class="form-select" id="exampleFormControlSelect1" aria-label="State">
-                  <option value="Maharashtra" @selected(old('state', $lead?->state ?? 'Maharashtra') === 'Maharashtra')>Maharashtra</option>
+                <select name="state" class="form-select location-select" id="leadState" data-placeholder="Select state" aria-label="State" data-selected="{{ old('state', $lead?->state ?? '') }}">
+                  <option value="">Select state</option>
                 </select>
               </div>
             </div>
           </div>
           <div class="col-sm-3">
             <div class="mb-6">
-              <label class="form-label" for="basic-icon-default-fullname">City</label>
+              <label class="form-label" for="leadCity">City</label>
               <div class="input-group input-group-merge">
                 <span id="basic-icon-default-fullname2" class="input-group-text"><i class="icon-base bx bx-map"></i></span>
-                <select name="city" class="form-select" id="exampleFormControlSelect1" aria-label="City">
-                  <option value="Pulgaon" @selected(old('city', $lead?->city ?? 'Pulgaon') === 'Pulgaon')>Pulgaon</option>
+                <select name="city" class="form-select location-select" id="leadCity" data-placeholder="Select city" aria-label="City" data-selected="{{ old('city', $lead?->city ?? '') }}">
+                  <option value="">Select city</option>
                 </select>
               </div>
             </div>
@@ -238,3 +238,121 @@
 </div>
 @endif
 @endsection
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/css/tom-select.bootstrap5.min.css">
+@endpush
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.4.3/dist/js/tom-select.complete.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    const countrySelect = document.getElementById('leadCountry');
+    const stateSelect = document.getElementById('leadState');
+    const citySelect = document.getElementById('leadCity');
+    const selectedCountry = @json(old('country', $lead?->country ?? 'India'));
+    const selectedState = stateSelect?.dataset.selected || '';
+    const selectedCity = citySelect?.dataset.selected || '';
+
+    if (!countrySelect || !stateSelect || !citySelect || !window.appAjax) {
+      return;
+    }
+
+    const searchableSelects = new Map(
+      [countrySelect, stateSelect, citySelect].map((select) => [
+        select,
+        new TomSelect(select, {
+          create: false,
+          maxOptions: null,
+          searchField: ['text'],
+          placeholder: select.dataset.placeholder,
+        }),
+      ]),
+    );
+
+    const setOptions = (select, values, placeholder, selectedValue = '') => {
+      const searchableSelect = searchableSelects.get(select);
+      const options = values.map((item) => {
+        const name = typeof item === 'string' ? item : item.name;
+
+        return { value: name, text: name };
+      });
+
+      searchableSelect.clearOptions();
+      searchableSelect.addOptions(options);
+      searchableSelect.setValue(selectedValue, true);
+      searchableSelect.settings.placeholder = placeholder;
+      searchableSelect.refreshOptions(false);
+
+      if (values.length === 0) {
+        searchableSelect.disable();
+      } else {
+        searchableSelect.enable();
+      }
+    };
+
+    const loadStates = async (country, selectedValue = '') => {
+      stateSelect.disabled = true;
+      citySelect.disabled = true;
+      setOptions(stateSelect, [], 'Loading states...');
+      setOptions(citySelect, [], 'Select city');
+
+      const states = await window.appAjax.get('{{ route('locations.states') }}', { country });
+      setOptions(stateSelect, states, 'Select state', selectedValue);
+    };
+
+    const loadCities = async (country, state, selectedValue = '') => {
+      citySelect.disabled = true;
+      setOptions(citySelect, [], 'Loading cities...');
+
+      const cities = await window.appAjax.get('{{ route('locations.cities') }}', { country, state });
+      setOptions(citySelect, cities, 'Select city', selectedValue);
+    };
+
+    countrySelect.addEventListener('change', async () => {
+      if (!countrySelect.value) {
+        setOptions(stateSelect, [], 'Select state');
+        setOptions(citySelect, [], 'Select city');
+        return;
+      }
+
+      try {
+        await loadStates(countrySelect.value);
+      } catch (error) {
+        setOptions(stateSelect, [], 'Unable to load states');
+        console.error(error);
+      }
+    });
+
+    stateSelect.addEventListener('change', async () => {
+      if (!stateSelect.value) {
+        setOptions(citySelect, [], 'Select city');
+        return;
+      }
+
+      try {
+        await loadCities(countrySelect.value, stateSelect.value);
+      } catch (error) {
+        setOptions(citySelect, [], 'Unable to load cities');
+        console.error(error);
+      }
+    });
+
+    try {
+      const countries = await window.appAjax.get('{{ route('locations.countries') }}');
+      setOptions(countrySelect, countries, 'Select country', selectedCountry);
+
+      if (countrySelect.value) {
+        await loadStates(countrySelect.value, selectedState);
+
+        if (stateSelect.value) {
+          await loadCities(countrySelect.value, stateSelect.value, selectedCity);
+        }
+      }
+    } catch (error) {
+      setOptions(countrySelect, [], 'Unable to load countries');
+      console.error(error);
+    }
+  });
+</script>
+@endpush

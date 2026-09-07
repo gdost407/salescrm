@@ -1,9 +1,12 @@
 <?php
 
+use App\Models\City;
 use App\Models\Company;
+use App\Models\Country;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadSetting;
+use App\Models\State;
 use App\Models\User;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,6 +63,29 @@ test('lead form uses active company settings and users', function () {
         ->assertSee(route('sales-leads.import'), false)
         ->assertSee(route('sales-leads.import.sample'), false)
         ->assertSee($user->name);
+});
+
+test('location endpoints return states and cities for selected parents', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
+    $user = leadCrudUser($company);
+    $country = Country::create(['id' => 101, 'shortname' => 'IN', 'name' => 'India', 'phonecode' => 91]);
+    $state = State::create(['id' => 22, 'name' => 'Maharashtra', 'country_id' => $country->id]);
+    City::create(['id' => 1, 'name' => 'Pulgaon', 'state_id' => $state->id]);
+
+    $this->actingAs($user)
+        ->getJson(route('locations.countries'))
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.name', 'India');
+
+    $this->actingAs($user)
+        ->getJson(route('locations.states', ['country' => 'India']))
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.name', 'Maharashtra');
+
+    $this->actingAs($user)
+        ->getJson(route('locations.cities', ['country' => 'India', 'state' => 'Maharashtra']))
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.name', 'Pulgaon');
 });
 
 test('a user can create update and delete a lead', function () {
