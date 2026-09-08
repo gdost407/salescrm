@@ -41,6 +41,17 @@ class SalesController extends Controller
             ->where(function ($query) use ($companyId) {
                 $query->whereNull('company_id')->orWhere('company_id', $companyId);
             })
+            ->orderByRaw("CASE
+                WHEN name = 'New' THEN 0
+                WHEN name = 'Open' THEN 1
+                WHEN name = 'In Progress' THEN 2
+                WHEN name = 'Follow Up' THEN 3
+                WHEN type = 'manual' THEN 4
+                WHEN name = 'Converted' THEN 5
+                WHEN name = 'Lost' THEN 6
+                WHEN name = 'Cancelled' THEN 7
+                ELSE 8
+            END")
             ->orderBy('sort_order')
             ->orderBy('name')
             ->pluck('name');
@@ -581,8 +592,26 @@ class SalesController extends Controller
                 $query->whereNull('company_id')->orWhere('company_id', $companyId);
             })
             ->whereIn('setting_type', ['stage', 'status', 'source'])
-            ->orderBy('sort_order')->orderBy('name')
-            ->get(['setting_type', 'name'])->groupBy('setting_type');
+            ->orderByRaw("CASE
+                WHEN setting_type = 'stage' THEN 0
+                WHEN setting_type = 'status' THEN 1
+                WHEN setting_type = 'source' THEN 2
+                ELSE 3
+            END")
+            ->orderByRaw("CASE
+                WHEN setting_type = 'status' AND name = 'New' THEN 0
+                WHEN setting_type = 'status' AND name = 'Open' THEN 1
+                WHEN setting_type = 'status' AND name = 'In Progress' THEN 2
+                WHEN setting_type = 'status' AND name = 'Follow Up' THEN 3
+                WHEN setting_type = 'status' AND type = 'manual' THEN 4
+                WHEN setting_type = 'status' AND name = 'Converted' THEN 5
+                WHEN setting_type = 'status' AND name = 'Lost' THEN 6
+                WHEN setting_type = 'status' AND name = 'Cancelled' THEN 7
+                ELSE 8
+            END")
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get(['setting_type', 'name', 'type'])->groupBy('setting_type');
         $users = User::query()->where('company_id', $companyId)->where('is_active', true)->orderBy('name')->get(['id', 'name', 'email']);
 
         return [
@@ -599,6 +628,23 @@ class SalesController extends Controller
             ->where(function ($query) use ($companyId) {
                 $query->whereNull('company_id')->orWhere('company_id', $companyId);
             })
+            ->orderByRaw("CASE
+                WHEN setting_type = 'stage' THEN 0
+                WHEN setting_type = 'status' THEN 1
+                WHEN setting_type = 'source' THEN 2
+                ELSE 3
+            END")
+            ->orderByRaw("CASE
+                WHEN setting_type = 'status' AND name = 'New' THEN 0
+                WHEN setting_type = 'status' AND name = 'Open' THEN 1
+                WHEN setting_type = 'status' AND name = 'In Progress' THEN 2
+                WHEN setting_type = 'status' AND name = 'Follow Up' THEN 3
+                WHEN setting_type = 'status' AND type = 'manual' THEN 4
+                WHEN setting_type = 'status' AND name = 'Converted' THEN 5
+                WHEN setting_type = 'status' AND name = 'Lost' THEN 6
+                WHEN setting_type = 'status' AND name = 'Cancelled' THEN 7
+                ELSE 8
+            END")
             ->orderBy('sort_order')
             ->orderBy('name')
             ->get()

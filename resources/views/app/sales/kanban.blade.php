@@ -12,7 +12,10 @@
             <button class="btn btn-sm btn-primary" type="submit" title="Filter leads"><i class="bx bx-search"></i></button>
             <button class="btn btn-sm btn-outline-secondary" type="button" data-bs-toggle="offcanvas" data-bs-target="#kanban-filter" title="More filters"><i class="bx bx-filter-alt"></i></button>
         </form>
-        <a href="{{ route('sales-create-lead') }}" class="btn btn-sm btn-primary"><i class="bx bx-plus me-1"></i>New lead</a>
+        <div class="d-flex align-items-center gap-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="offcanvas" data-bs-target="#kanban-status-settings" title="Manage columns"><i class="bx bx-columns me-1"></i>Columns</button>
+            <a href="{{ route('sales-create-lead') }}" class="btn btn-sm btn-primary"><i class="bx bx-plus me-1"></i>New lead</a>
+        </div>
     </div>
     <div id="kanban-alert" class="alert d-none" role="alert"></div>
     <div class="kanban-board d-flex gap-3 overflow-auto pb-3" data-kanban-board>
@@ -44,6 +47,26 @@
     </div>
 </div>
 
+<div class="offcanvas offcanvas-end" tabindex="-1" id="kanban-status-settings" aria-labelledby="kanban-status-settings-label">
+    <div class="offcanvas-header"><h5 id="kanban-status-settings-label" class="offcanvas-title">Kanban columns</h5><button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button></div>
+    <div class="offcanvas-body">
+        <div class="list-group" data-kanban-status-list>
+            @foreach ($statuses as $status)
+                <div class="list-group-item d-flex align-items-center justify-content-between gap-2" draggable="true" data-status-item="{{ $status }}">
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn btn-xs btn-link p-0 text-body-secondary" data-status-move="up" title="Move left"><i class="bx bx-chevron-left"></i></button>
+                        <button type="button" class="btn btn-xs btn-link p-0 text-body-secondary" data-status-move="down" title="Move right"><i class="bx bx-chevron-right"></i></button>
+                        <div class="form-check form-switch m-0">
+                            <input class="form-check-input" type="checkbox" data-status-toggle="{{ $status }}" checked>
+                        </div>
+                    </div>
+                    <span class="fw-medium text-truncate">{{ $status }}</span>
+                </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+
 <div class="modal fade" id="create-lead-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
     <form method="POST" action="{{ route('sales-leads.store') }}" data-create-lead-form>@csrf
         <div class="modal-header"><h5 class="modal-title">New lead</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
@@ -65,7 +88,10 @@
 <div class="modal fade" id="activity-modal" tabindex="-1" aria-hidden="true"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content"><form method="POST" data-activity-form>@csrf<div class="modal-header"><h5 class="modal-title">Add activity</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div><div class="modal-body"><input type="hidden" name="activity_type" value="notes"><div class="d-flex flex-wrap gap-2 mb-3">@foreach (['notes' => 'Note', 'call' => 'Call', 'followup' => 'Follow-up', 'visit' => 'Visit', 'gmeet' => 'Meeting', 'email' => 'Email'] as $type => $label)<button type="button" class="btn btn-sm btn-outline-primary" data-activity-type="{{ $type }}">{{ $label }}</button>@endforeach</div><div data-activity-fields></div></div><div class="modal-footer"><button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button><button class="btn btn-primary">Save activity</button></div></form></div></div></div>
 
 <script>
-document.addEventListener('DOMContentLoaded', () => {
+const initKanbanBoard = () => {
+    if (window.__kanbanBoardInitialized) return;
+    window.__kanbanBoardInitialized = true;
+
     const token = document.querySelector('meta[name="csrf-token"]')?.content ?? '';
     const detailModal = new bootstrap.Offcanvas(document.getElementById('lead-detail-modal'));
     const activityModal = new bootstrap.Modal(document.getElementById('activity-modal'));
@@ -75,9 +101,54 @@ document.addEventListener('DOMContentLoaded', () => {
     const activityUrl = @json(route('sales-lead-activities.store', '__lead__'));
     const dataUrl = @json(route('sales-leads.kanban-data'));
     const assigneeUrl = @json(route('sales-leads.assignee', '__lead__'));
-    const board = document.querySelector('[data-kanban-board]');
     const activityForm = document.querySelector('[data-activity-form]');
     const showAlert = (message, type = 'success') => { const alert = document.querySelector('#kanban-alert'); alert.className = `alert alert-${type}`; alert.textContent = message; window.setTimeout(() => alert.classList.add('d-none'), 3500); };
+    const statusPreferenceKey = 'sales-kanban-status-order';
+    const board = document.querySelector('[data-kanban-board]');
+    const getBoardStatuses = () => Array.from(board.querySelectorAll('.kanban-column')).map((column) => column.dataset.status);
+    const getStatusPreferences = () => {
+        const allStatuses = getBoardStatuses();
+        try {
+            const saved = JSON.parse(localStorage.getItem(statusPreferenceKey) || '{}');
+            const order = Array.isArray(saved.order) ? saved.order.filter((status) => allStatuses.includes(status)) : [];
+            const hidden = Array.isArray(saved.hidden) ? saved.hidden.filter((status) => allStatuses.includes(status)) : [];
+            return {
+                order: [...order, ...allStatuses.filter((status) => !order.includes(status))],
+                hidden: new Set(hidden),
+            };
+        } catch (error) {
+            return { order: allStatuses, hidden: new Set() };
+        }
+    };
+    const saveStatusPreferences = () => {
+        const allStatuses = getBoardStatuses();
+        const hidden = allStatuses.filter((status) => {
+            const column = board.querySelector(`.kanban-column[data-status="${CSS.escape(status)}"]`);
+            return column?.hidden;
+        });
+        const order = allStatuses.map((status) => status);
+        localStorage.setItem(statusPreferenceKey, JSON.stringify({ order, hidden }));
+    };
+    const applyStatusSettings = () => {
+        const allColumns = Array.from(board.querySelectorAll('.kanban-column'));
+        const { order, hidden } = getStatusPreferences();
+        allColumns.forEach((column) => {
+            const shouldShow = !hidden.has(column.dataset.status);
+            column.hidden = !shouldShow;
+            column.style.display = shouldShow ? '' : 'none';
+        });
+
+        order.forEach((status) => {
+            const current = board.querySelector(`.kanban-column[data-status="${CSS.escape(status)}"]`);
+            if (!current) return;
+            board.appendChild(current);
+        });
+
+        document.querySelectorAll('[data-status-toggle]').forEach((toggle) => {
+            const status = toggle.dataset.statusToggle;
+            toggle.checked = !hidden.has(status);
+        });
+    };
     const refreshCounts = () => document.querySelectorAll('[data-count]').forEach((count) => { count.textContent = count.closest('.kanban-column').dataset.total ?? 0; });
     const filterData = () => Object.fromEntries(new FormData(document.querySelector('#kanban-filter form')).entries());
     const loadColumn = async (zone, reset = false) => {
@@ -107,6 +178,38 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const setActivityType = (type) => { activityForm.querySelector('[name="activity_type"]').value = type; activityForm.querySelector('[data-activity-fields]').innerHTML = activityFields[type]; document.querySelectorAll('[data-activity-type]').forEach((button) => button.classList.toggle('active', button.dataset.activityType === type)); };
     const routeFor = (template, leadId) => template.replace('__lead__', leadId);
+    document.querySelectorAll('[data-status-toggle]').forEach((toggle) => {
+        toggle.addEventListener('change', () => {
+            const status = toggle.dataset.statusToggle;
+            const column = board.querySelector(`.kanban-column[data-status="${CSS.escape(status)}"]`);
+            if (!column) return;
+            const preferences = getStatusPreferences();
+            if (toggle.checked) {
+                preferences.hidden.delete(status);
+            } else {
+                preferences.hidden.add(status);
+            }
+            localStorage.setItem(statusPreferenceKey, JSON.stringify({ order: getBoardStatuses(), hidden: [...preferences.hidden] }));
+            column.hidden = !toggle.checked;
+            column.style.display = toggle.checked ? '' : 'none';
+            applyStatusSettings();
+        });
+    });
+    document.querySelectorAll('[data-status-move]').forEach((button) => {
+        button.addEventListener('click', () => {
+            const status = button.closest('[data-status-item]').dataset.statusItem;
+            const columns = Array.from(board.querySelectorAll('.kanban-column')); 
+            const currentIndex = columns.findIndex((column) => column.dataset.status === status);
+            if (currentIndex === -1) return;
+            const targetIndex = button.dataset.statusMove === 'up' ? currentIndex - 1 : currentIndex + 1;
+            if (targetIndex < 0 || targetIndex >= columns.length) return;
+            const currentColumn = columns[currentIndex];
+            const targetColumn = columns[targetIndex];
+            board.insertBefore(currentColumn, targetIndex > currentIndex ? targetColumn.nextSibling : targetColumn);
+            saveStatusPreferences();
+            applyStatusSettings();
+        });
+    });
     document.addEventListener('dragstart', (event) => { const card = event.target.closest('.kanban-lead'); if (!card) return; card.classList.add('opacity-50'); card.dataset.origin = card.parentElement.dataset.status; });
     document.addEventListener('dragend', (event) => event.target.closest('.kanban-lead')?.classList.remove('opacity-50'));
     document.querySelectorAll('.kanban-dropzone').forEach((zone) => { zone.addEventListener('scroll', () => { if (zone.scrollTop + zone.clientHeight >= zone.scrollHeight - 80) loadColumn(zone); zone.closest('.kanban-column').dataset.total = zone.closest('.kanban-column').dataset.total ?? 0; }); zone.addEventListener('dragover', (event) => event.preventDefault()); zone.addEventListener('drop', async (event) => { event.preventDefault(); const card = document.querySelector('.kanban-lead.opacity-50'); if (!card || card.dataset.origin === zone.dataset.status) return; const origin = card.parentElement; const response = await fetch(routeFor(statusUrl, card.dataset.leadId), { method: 'PATCH', headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-CSRF-TOKEN': token }, body: JSON.stringify({ status: zone.dataset.status }) }); if (response.ok) { zone.append(card); showAlert('Lead status updated.'); return; } origin.append(card); showAlert('Unable to update lead status.', 'danger'); }); });
@@ -115,7 +218,14 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelector('[data-create-lead-form]').addEventListener('submit', async (event) => { event.preventDefault(); const response = await fetch(event.target.action, { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token }, body: new FormData(event.target) }); if (!response.ok) { const data = await response.json(); window.unlockFormSubmit(event.target); showAlert(Object.values(data.errors ?? {}).flat()[0] ?? 'Unable to create lead.', 'danger'); return; } const data = await response.json(); const column = document.querySelector(`.kanban-dropzone[data-status="${CSS.escape(data.status)}"]`); if (!column) { window.location.reload(); return; } column.insertAdjacentHTML('afterbegin', data.html); refreshCounts(); event.target.reset(); window.unlockFormSubmit(event.target); createModal.hide(); showAlert(data.message); });
     activityForm.addEventListener('submit', async (event) => { event.preventDefault(); const response = await fetch(event.target.action, { method: 'POST', headers: { Accept: 'application/json', 'X-CSRF-TOKEN': token }, body: new FormData(event.target) }); if (!response.ok) { const data = await response.json(); window.unlockFormSubmit(event.target); showAlert(Object.values(data.errors ?? {}).flat()[0] ?? 'Please complete the activity fields.', 'danger'); return; } activityModal.hide(); window.unlockFormSubmit(event.target); showAlert((await response.json()).message); });
     setActivityType('notes');
+    applyStatusSettings();
     loadBoard();
-});
+};
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initKanbanBoard);
+} else {
+    initKanbanBoard();
+}
 </script>
 @endsection

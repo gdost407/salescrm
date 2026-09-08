@@ -43,6 +43,28 @@ function leadCrudUser(Company $company): User
     return User::factory()->for($company)->create(['is_active' => true]);
 }
 
+test('kanban status columns keep system defaults first, custom statuses next, and trailing system statuses last', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme', 'onboarding_completed_at' => now()]);
+    $user = User::factory()->for($company)->create(['user_type' => 'owner', 'is_active' => true, 'company_id' => $company->id]);
+
+    LeadSetting::insert([
+        ['setting_type' => 'status', 'name' => 'New', 'type' => 'system', 'is_active' => true, 'sort_order' => 1, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Open', 'type' => 'system', 'is_active' => true, 'sort_order' => 2, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'In Progress', 'type' => 'system', 'is_active' => true, 'sort_order' => 3, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Follow Up', 'type' => 'system', 'is_active' => true, 'sort_order' => 4, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Prospect Review', 'type' => 'manual', 'is_active' => true, 'sort_order' => 5, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Hot Lead', 'type' => 'manual', 'is_active' => true, 'sort_order' => 6, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Converted', 'type' => 'system', 'is_active' => true, 'sort_order' => 7, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Lost', 'type' => 'system', 'is_active' => true, 'sort_order' => 8, 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Cancelled', 'type' => 'system', 'is_active' => true, 'sort_order' => 9, 'created_at' => now(), 'updated_at' => now()],
+    ]);
+
+    $this->actingAs($user)
+        ->get(route('sale-kanban'))
+        ->assertSuccessful()
+        ->assertSeeInOrder(['New', 'Open', 'In Progress', 'Follow Up', 'Prospect Review', 'Hot Lead', 'Converted', 'Lost', 'Cancelled']);
+});
+
 test('lead form uses active company settings and users', function () {
     $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
     $user = leadCrudUser($company);
