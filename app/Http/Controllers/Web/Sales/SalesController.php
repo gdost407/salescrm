@@ -508,9 +508,12 @@ class SalesController extends Controller
 
     private function filteredLeads(Request $request, array $filters)
     {
+        $isStaffUser = $request->user()?->user_type === 'staff';
+
         return Lead::query()
             ->where('company_id', $request->user()->company_id)
             ->with('assignee:id,name')
+            ->when($isStaffUser, fn ($query) => $query->where('assigned_to', $request->user()->id))
             ->when($filters['search'], function ($query, $search) {
                 $query->where(function ($query) use ($search) {
                     $query->where('name', 'like', "%{$search}%")
@@ -522,7 +525,7 @@ class SalesController extends Controller
             ->when($filters['status'], fn ($query, $status) => $query->where('status', $status))
             ->when($filters['stage'], fn ($query, $stage) => $query->where('stage', $stage))
             ->when($filters['source'], fn ($query, $source) => $query->where('source', $source))
-            ->when($filters['assigned_to'], fn ($query, $assignedTo) => $query->where('assigned_to', $assignedTo))
+            ->when(! $isStaffUser && $filters['assigned_to'], fn ($query, $assignedTo) => $query->where('assigned_to', $assignedTo))
             ->when($filters['date_from'], fn ($query, $dateFrom) => $query->whereDate('created_at', '>=', $dateFrom))
             ->when($filters['date_to'], fn ($query, $dateTo) => $query->whereDate('created_at', '<=', $dateTo))
             ->latest();
@@ -530,6 +533,7 @@ class SalesController extends Controller
 
     private function leadListFilters(Request $request): array
     {
+        $isStaffUser = $request->user()?->user_type === 'staff';
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:255'],
             'date_range' => ['nullable', Rule::in(['today', 'week', 'month', '3_month', 'year', 'custom'])],
@@ -555,11 +559,16 @@ class SalesController extends Controller
             };
         }
 
+        $assignedTo = $validated['assigned_to'] ?? '';
+        if ($isStaffUser) {
+            $assignedTo = (string) $request->user()->id;
+        }
+
         return [
             'search' => trim($validated['search'] ?? ''), 'date_range' => $range,
             'date_from' => $dateFrom, 'date_to' => $dateTo,
             'status' => $validated['status'] ?? '', 'stage' => $validated['stage'] ?? '',
-            'source' => $validated['source'] ?? '', 'assigned_to' => $validated['assigned_to'] ?? '',
+            'source' => $validated['source'] ?? '', 'assigned_to' => $assignedTo,
         ];
     }
 

@@ -88,6 +88,7 @@
           </select>
         </div>
       </div>
+      @if (auth()->user()?->user_type !== 'staff')
       <div class="mb-6">
         <label class="form-label" for="basic-icon-default-fullname">Contact Person</label>
         <div class="input-group input-group-merge">
@@ -100,6 +101,7 @@
           </select>
         </div>
       </div>
+      @endif
       <div class="d-flex gap-2">
         <button type="submit" class="btn btn-sm btn-primary">Apply filters</button>
         <a href="{{ route('sales-all-list') }}" class="btn btn-sm btn-outline-secondary">Clear</a>

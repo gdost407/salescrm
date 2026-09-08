@@ -186,6 +186,59 @@ test('lead list filters, paginates, and exports only the company leads', functio
         ->not->toContain('Private Matching Lead');
 });
 
+test('staff users default to their own leads and cannot filter by other staff members', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme', 'onboarding_completed_at' => now()]);
+    $owner = User::factory()->for($company)->create(['user_type' => 'owner', 'is_active' => true, 'company_id' => $company->id]);
+    $staff = User::factory()->for($company)->create(['user_type' => 'staff', 'is_active' => true, 'company_id' => $company->id]);
+    $otherStaff = User::factory()->for($company)->create(['user_type' => 'staff', 'is_active' => true]);
+    LeadSetting::insert([
+        ['setting_type' => 'stage', 'name' => 'New', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'stage', 'name' => 'Qualification', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'New', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Open', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'source', 'name' => 'Self', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'source', 'name' => 'Referral', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+    ]);
+
+    Lead::create(['company_id' => $company->id, 'created_by' => $owner->id, 'assigned_to' => $staff->id, 'name' => 'Staff Lead', 'email' => 'staff@example.com', 'stage' => 'Qualification', 'status' => 'Open', 'source' => 'Referral']);
+    Lead::create(['company_id' => $company->id, 'created_by' => $owner->id, 'assigned_to' => $otherStaff->id, 'name' => 'Other Staff Lead', 'email' => 'other-staff@example.com', 'stage' => 'Qualification', 'status' => 'Open', 'source' => 'Referral']);
+    Lead::create(['company_id' => $company->id, 'created_by' => $owner->id, 'assigned_to' => null, 'name' => 'Unassigned Lead', 'email' => 'unassigned@example.com', 'stage' => 'Qualification', 'status' => 'Open', 'source' => 'Referral']);
+
+    $this->actingAs($staff)->get(route('sales-all-list'))
+        ->assertSuccessful()
+        ->assertSee('Staff Lead')
+        ->assertDontSee('Other Staff Lead')
+        ->assertDontSee('Unassigned Lead')
+        ->assertDontSee('name="assigned_to"');
+
+    $this->actingAs($staff)->get(route('sale-kanban'))
+        ->assertSuccessful()
+        ->assertDontSee('name="assigned_to"');
+});
+
+test('owners can view all unassigned and assigned leads', function () {
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme', 'onboarding_completed_at' => now()]);
+    $owner = User::factory()->for($company)->create(['user_type' => 'owner', 'is_active' => true, 'company_id' => $company->id]);
+    $staff = User::factory()->for($company)->create(['user_type' => 'staff', 'is_active' => true, 'company_id' => $company->id]);
+    LeadSetting::insert([
+        ['setting_type' => 'stage', 'name' => 'New', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'stage', 'name' => 'Qualification', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'New', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'status', 'name' => 'Open', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'source', 'name' => 'Self', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+        ['setting_type' => 'source', 'name' => 'Referral', 'type' => 'system', 'created_at' => now(), 'updated_at' => now()],
+    ]);
+
+    Lead::create(['company_id' => $company->id, 'created_by' => $owner->id, 'assigned_to' => $staff->id, 'name' => 'Assigned Lead', 'email' => 'assigned@example.com', 'stage' => 'Qualification', 'status' => 'Open', 'source' => 'Referral']);
+    Lead::create(['company_id' => $company->id, 'created_by' => $owner->id, 'assigned_to' => null, 'name' => 'Unassigned Lead', 'email' => 'unassigned-owner@example.com', 'stage' => 'Qualification', 'status' => 'Open', 'source' => 'Referral']);
+
+    $this->actingAs($owner)->get(route('sales-all-list'))
+        ->assertSuccessful()
+        ->assertSee('Assigned Lead')
+        ->assertSee('Unassigned Lead')
+        ->assertSee('name="assigned_to"');
+});
+
 test('a user can import leads from a CSV sample format', function () {
     $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
     $user = leadCrudUser($company);

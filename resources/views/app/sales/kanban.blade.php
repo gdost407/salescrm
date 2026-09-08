@@ -36,7 +36,9 @@
             <label class="form-label">Stage</label><select class="form-select mb-3" name="stage"><option value="">All stages</option>@foreach ($filterOptions['stages'] ?? [] as $option)<option value="{{ $option->name }}" @selected($filters['stage'] === $option->name)>{{ $option->name }}</option>@endforeach</select>
             <label class="form-label">Status</label><select class="form-select mb-3" name="status"><option value="">All statuses</option>@foreach ($filterOptions['statuses'] ?? [] as $option)<option value="{{ $option->name }}" @selected($filters['status'] === $option->name)>{{ $option->name }}</option>@endforeach</select>
             <label class="form-label">Source</label><select class="form-select mb-3" name="source"><option value="">All sources</option>@foreach ($filterOptions['sources'] ?? [] as $option)<option value="{{ $option->name }}" @selected($filters['source'] === $option->name)>{{ $option->name }}</option>@endforeach</select>
+            @if (auth()->user()?->user_type !== 'staff')
             <label class="form-label">Contact person</label><select class="form-select mb-3" name="assigned_to"><option value="">All contact persons</option>@foreach ($filterOptions['users'] ?? [] as $user)<option value="{{ $user->id }}" @selected((string) $filters['assigned_to'] === (string) $user->id)>{{ $user->name }}</option>@endforeach</select>
+            @endif
             <button class="btn btn-primary" type="submit">Apply filters</button>
         </form>
     </div>
