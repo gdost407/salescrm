@@ -69,7 +69,7 @@
           </div>
           <div class="col-sm-3">
             <div class="mb-6">
-              <label class="form-label" for="basic-icon-default-fullname">Role</label>
+              <label class="form-label" for="basic-icon-default-fullname">Job Role</label>
               <div class="input-group input-group-merge">
                 <span id="basic-icon-default-fullname2" class="input-group-text text-danger"><i class="icon-base bx bx-pin"></i></span>
                 <select name="job_role" class="form-select" id="job_role" aria-label="Role" required>
@@ -80,6 +80,20 @@
                   echo "<option value=\"$r\" $selected>$r</option>";
                   }
                   @endphp
+                </select>
+              </div>
+            </div>
+          </div>
+          <div class="col-sm-3">
+            <div class="mb-6">
+              <label class="form-label" for="role_id">CRM Role Access</label>
+              <div class="input-group input-group-merge">
+                <span id="role-id-icon" class="input-group-text text-danger"><i class="icon-base bx bx-lock-alt"></i></span>
+                <select name="role_id" class="form-select" id="role_id" aria-label="CRM role access">
+                  <option value="">Select access role</option>
+                  @foreach ($roles ?? [] as $roleOption)
+                    <option value="{{ $roleOption->id }}" @selected(old('role_id') == $roleOption->id)>{{ $roleOption->name }}</option>
+                  @endforeach
                 </select>
               </div>
             </div>

@@ -134,7 +134,7 @@
             <div data-i18n="Notifications">Manage Staff</div>
           </a>
         </li>
-        <li class="d-none menu-item {{ request()->routeIs('staff-roles') ? 'active' : '' }}">
+        <li class="menu-item {{ request()->routeIs('staff-roles') ? 'active' : '' }}">
           <a href="{{ route('staff-roles') }}" class="menu-link">
             <div data-i18n="Connections">Roles</div>
           </a>

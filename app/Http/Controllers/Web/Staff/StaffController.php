@@ -7,6 +7,8 @@ use App\Http\Requests\StoreStaffRequest;
 use App\Http\Requests\UpdateStaffRequest;
 use App\Jobs\SendStaffCredentialsEmail;
 use App\Models\Company;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -19,9 +21,14 @@ class StaffController extends Controller
     /**
      * Show create staff form.
      */
-    public function create(): View
+    public function create(Request $request): View
     {
-        return view('app.staff.create');
+        return view('app.staff.create', [
+            'roles' => Role::query()
+                ->where('company_id', $request->user()->company_id)
+                ->orderBy('name')
+                ->get(),
+        ]);
     }
 
     /**
@@ -84,7 +91,13 @@ class StaffController extends Controller
             abort(404);
         }
 
-        return view('app.staff.edit', ['staff' => $staffUser]);
+        return view('app.staff.edit', [
+            'staff' => $staffUser,
+            'roles' => Role::query()
+                ->where('company_id', $currentUser->company_id)
+                ->orderBy('name')
+                ->get(),
+        ]);
     }
 
     /**
@@ -123,46 +136,147 @@ class StaffController extends Controller
     /**
      * Show roles and permissions management.
      */
-    public function roles()
+    public function roles(Request $request): View
     {
-        $roles = [
-            [
-                'id' => 1,
-                'name' => 'Sales Executive',
-                'description' => 'Can manage own leads and activities',
-                'permissions' => ['view_leads', 'create_leads', 'edit_own_leads'],
-            ],
-            [
-                'id' => 2,
-                'name' => 'Sales Manager',
-                'description' => 'Can manage team leads and performance',
-                'permissions' => ['view_leads', 'create_leads', 'edit_all_leads', 'view_reports', 'manage_team'],
-            ],
-            [
-                'id' => 3,
-                'name' => 'Team Lead',
-                'description' => 'Can oversee team activities',
-                'permissions' => ['view_leads', 'create_leads', 'edit_team_leads', 'view_reports'],
-            ],
-            [
-                'id' => 4,
-                'name' => 'Administrator',
-                'description' => 'Full system access',
-                'permissions' => ['all'],
-            ],
-        ];
+        $companyId = $request->user()->company_id;
 
-        $permissions = [
-            ['name' => 'view_leads', 'label' => 'View Leads'],
-            ['name' => 'create_leads', 'label' => 'Create Leads'],
-            ['name' => 'edit_own_leads', 'label' => 'Edit Own Leads'],
-            ['name' => 'edit_team_leads', 'label' => 'Edit Team Leads'],
-            ['name' => 'edit_all_leads', 'label' => 'Edit All Leads'],
-            ['name' => 'delete_leads', 'label' => 'Delete Leads'],
-            ['name' => 'view_reports', 'label' => 'View Reports'],
-            ['name' => 'manage_team', 'label' => 'Manage Team'],
-        ];
+        $this->ensureDefaultPermissions($companyId);
+
+        $roles = Role::query()
+            ->where('company_id', $companyId)
+            ->with('permissions:id,slug,name,module')
+            ->orderBy('name')
+            ->get();
+
+        $permissions = Permission::query()
+            ->where('company_id', $companyId)
+            ->orderBy('module')
+            ->orderBy('name')
+            ->get();
 
         return view('app.staff.roles', compact('roles', 'permissions'));
     }
+
+    public function storeRole(Request $request): RedirectResponse
+    {
+        $companyId = $request->user()->company_id;
+
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['string', 'max:120'],
+        ]);
+
+        $this->ensureDefaultPermissions($companyId);
+
+        $slug = $validated['slug'] ?? Str::slug($validated['name']);
+        $slug = $this->uniqueRoleSlug($companyId, $slug);
+
+        $role = Role::query()->firstOrCreate(
+            ['company_id' => $companyId, 'slug' => $slug],
+            [
+                'company_id' => $companyId,
+                'name' => $validated['name'],
+                'slug' => $slug,
+                'description' => $validated['description'] ?? null,
+                'status' => true,
+            ]
+        );
+
+        $role->update([
+            'name' => $validated['name'],
+            'description' => $validated['description'] ?? null,
+        ]);
+
+        $selectedPermissions = Permission::query()
+            ->where('company_id', $companyId)
+            ->whereIn('slug', $validated['permissions'] ?? [])
+            ->pluck('id');
+
+        $role->permissions()->sync($selectedPermissions);
+
+        return redirect()->route('staff-roles')->with('message', 'Role created successfully.');
+    }
+
+    private function uniqueRoleSlug(int $companyId, string $baseSlug): string
+    {
+        $slug = Str::slug($baseSlug) ?: 'role';
+        $candidate = $slug;
+        $counter = 1;
+
+        while (Role::query()->where('company_id', $companyId)->where('slug', $candidate)->exists()) {
+            $candidate = $slug.'-'.$counter;
+            $counter++;
+        }
+
+        return $candidate;
+    }
+
+    private function ensureDefaultPermissions(int $companyId): void
+    {
+        $defaultPermissions = [
+            ['name' => 'View Leads', 'slug' => 'view_leads', 'module' => 'lead'],
+            ['name' => 'Create Leads', 'slug' => 'create_leads', 'module' => 'lead'],
+            ['name' => 'Edit Own Leads', 'slug' => 'edit_own_leads', 'module' => 'lead'],
+            ['name' => 'Edit All Leads', 'slug' => 'edit_all_leads', 'module' => 'lead'],
+            ['name' => 'Delete Leads', 'slug' => 'delete_leads', 'module' => 'lead'],
+            ['name' => 'Export Leads', 'slug' => 'export_leads', 'module' => 'lead'],
+            ['name' => 'Print Leads', 'slug' => 'print_leads', 'module' => 'lead'],
+            ['name' => 'View Reports', 'slug' => 'view_reports', 'module' => 'report'],
+            ['name' => 'Manage Team', 'slug' => 'manage_team', 'module' => 'staff'],
+            ['name' => 'Admin Access', 'slug' => 'admin_access', 'module' => 'admin'],
+        ];
+
+        foreach ($defaultPermissions as $permission) {
+            Permission::query()->firstOrCreate(
+                ['company_id' => $companyId, 'slug' => $permission['slug']],
+                [
+                    'company_id' => $companyId,
+                    'name' => $permission['name'],
+                    'slug' => $permission['slug'],
+                    'module' => $permission['module'],
+                    'description' => $permission['name'],
+                    'status' => true,
+                ]
+            );
+        }
+
+        Role::query()->firstOrCreate(
+            ['company_id' => $companyId, 'slug' => 'admin'],
+            [
+                'company_id' => $companyId,
+                'name' => 'Administrator',
+                'slug' => 'admin',
+                'description' => 'Full system access',
+                'status' => true,
+            ]
+        );
+
+        Role::query()->firstOrCreate(
+            ['company_id' => $companyId, 'slug' => 'sales-staff'],
+            [
+                'company_id' => $companyId,
+                'name' => 'Sales Staff',
+                'slug' => 'sales-staff',
+                'description' => 'Can manage assigned leads',
+                'status' => true,
+            ]
+        );
+
+        $adminRole = Role::query()->where('company_id', $companyId)->where('slug', 'admin')->first();
+        $salesStaff = Role::query()->where('company_id', $companyId)->where('slug', 'sales-staff')->first();
+
+        if ($adminRole) {
+            $adminRole->permissions()->sync(Permission::query()->where('company_id', $companyId)->pluck('id'));
+        }
+
+        if ($salesStaff) {
+            $salesStaff->permissions()->sync(
+                Permission::query()->where('company_id', $companyId)->whereIn('slug', ['view_leads', 'create_leads', 'edit_own_leads', 'export_leads', 'print_leads'])->pluck('id')
+            );
+        }
+    }
 }
+

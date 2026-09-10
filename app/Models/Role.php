@@ -11,7 +11,7 @@ class Role extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'description', 'status'];
+    protected $fillable = ['company_id', 'name', 'slug', 'description', 'status'];
 
     protected function casts(): array
     {

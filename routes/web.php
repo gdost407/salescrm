@@ -75,6 +75,7 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
         Route::put('{staffUser}', [StaffController::class, 'update'])->name('staff.update');
         Route::post('{staffUser}/resend-password', [StaffController::class, 'resendPassword'])->name('staff.resend-password');
         Route::get('roles', [StaffController::class, 'roles'])->name('staff-roles');
+        Route::post('roles', [StaffController::class, 'storeRole'])->name('staff.roles.store');
     });
 
     // Integration routes

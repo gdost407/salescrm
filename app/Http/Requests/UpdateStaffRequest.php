@@ -32,6 +32,7 @@ class UpdateStaffRequest extends FormRequest
             'joining_date' => ['nullable', 'date'],
             'department' => ['required', 'string', 'max:100'],
             'job_role' => ['required', 'string', 'max:100'],
+            'role_id' => ['nullable', Rule::exists('roles', 'id')->where(fn ($query) => $query->where('company_id', $this->user()->company_id))],
             'address' => ['nullable', 'string', 'max:1000'],
             'country' => ['nullable', 'string', 'max:100'],
             'state' => ['nullable', 'string', 'max:100'],

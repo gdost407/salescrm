@@ -110,6 +110,20 @@ class User extends Authenticatable // implements MustVerifyEmail
         return $this->hasMany(Notification::class);
     }
 
+    public function hasRole(string $slug): bool
+    {
+        return $this->role?->slug === $slug;
+    }
+
+    public function hasPermission(string $permission): bool
+    {
+        if ($this->user_type === 'owner') {
+            return true;
+        }
+
+        return $this->role?->permissions()->where('permissions.slug', $permission)->exists() ?? false;
+    }
+
     /**
      * Get the user's initials
      */

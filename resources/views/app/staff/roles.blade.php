@@ -6,75 +6,99 @@
         <h4 class="fw-bold py-3 mb-4">Roles & Permissions</h4>
     </div>
 
-    <div class="row">
-        <!-- Roles List -->
+    <div class="row g-4">
         <div class="col-md-5">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Roles</h5>
+                    <h5 class="card-title mb-0">CRM Roles</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-3">
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="newRole" placeholder="New role name">
-                            <button class="btn btn-outline-primary" type="button">
-                                <i class="bx bx-plus"></i> Add
-                            </button>
+                    <form action="{{ route('staff.roles.store') }}" method="POST" class="mb-4">
+                        @csrf
+                        <div class="row g-2">
+                            <div class="col-12">
+                                <label class="form-label" for="role_name">Role name</label>
+                                <input type="text" name="name" id="role_name" class="form-control" placeholder="Sales Staff" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="role_slug">Slug</label>
+                                <input type="text" name="slug" id="role_slug" class="form-control" placeholder="sales-staff">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label" for="role_description">Description</label>
+                                <textarea name="description" id="role_description" class="form-control" rows="2" placeholder="Only assigned leads and export access"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Permissions</label>
+                                <div class="row g-2">
+                                    @foreach ($permissions as $permission)
+                                        <div class="col-md-6">
+                                            <div class="form-check">
+                                                <input class="form-check-input" type="checkbox" name="permissions[]" value="{{ $permission->slug }}" id="perm-{{ $permission->id }}">
+                                                <label class="form-check-label" for="perm-{{ $permission->id }}">{{ $permission->name }}</label>
+                                            </div>
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary w-100"><i class="bx bx-plus"></i> Save Role</button>
+                            </div>
                         </div>
-                    </div>
+                    </form>
 
                     <div class="list-group">
-                        @foreach ($roles as $role)
-                            <button type="button" class="list-group-item list-group-item-action @if(isset($_GET['role_id']) && $_GET['role_id'] == $role['id']) active @endif">
-                                <div class="d-flex justify-content-between">
+                        @forelse ($roles as $role)
+                            <div class="list-group-item">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
                                     <div>
-                                        <h6 class="mb-1">{{ $role['name'] }}</h6>
-                                        <small>{{ $role['description'] }}</small>
+                                        <h6 class="mb-1">{{ $role->name }}</h6>
+                                        <small class="text-muted d-block">{{ $role->slug }}</small>
+                                        @if ($role->description)
+                                            <small class="text-muted">{{ $role->description }}</small>
+                                        @endif
                                     </div>
+                                    <span class="badge {{ $role->slug === 'admin' ? 'bg-danger' : 'bg-primary' }} rounded-pill">{{ $role->slug === 'admin' ? 'Admin' : 'Staff' }}</span>
                                 </div>
-                            </button>
-                        @endforeach
+                                @if ($role->permissions->isNotEmpty())
+                                    <div class="mt-2 d-flex flex-wrap gap-1">
+                                        @foreach ($role->permissions as $permission)
+                                            <span class="badge bg-light text-dark">{{ $permission->name }}</span>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="alert alert-info mb-0">No roles created yet.</div>
+                        @endforelse
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Permissions -->
         <div class="col-md-7">
-            <div class="card">
+            <div class="card h-100">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Select a role to manage permissions</h5>
+                    <h5 class="card-title mb-0">Permission Reference</h5>
                 </div>
                 <div class="card-body">
-                    <div class="alert alert-info mb-0">
-                        <i class="bx bx-info-circle"></i> Click on a role from the left panel to manage its permissions.
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Permission Legend -->
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="card bg-light">
-                <div class="card-body">
-                    <h6 class="card-title mb-3">Permission Reference</h6>
-                    <div class="row">
+                    <div class="row g-3">
                         <div class="col-md-6">
-                            <ul class="list-unstyled small">
-                                <li><strong>View Leads:</strong> Access to view all leads</li>
-                                <li><strong>Create Leads:</strong> Can create new leads</li>
-                                <li><strong>Edit Own Leads:</strong> Can edit only their own leads</li>
-                                <li><strong>Edit Team Leads:</strong> Can edit team member leads</li>
+                            <ul class="list-unstyled small mb-0">
+                                <li><strong>View Leads:</strong> Access to view leads</li>
+                                <li><strong>Create Leads:</strong> Add new leads</li>
+                                <li><strong>Edit Own Leads:</strong> Edit only assigned leads</li>
+                                <li><strong>Edit All Leads:</strong> Edit any lead</li>
+                                <li><strong>Delete Leads:</strong> Remove leads</li>
                             </ul>
                         </div>
                         <div class="col-md-6">
-                            <ul class="list-unstyled small">
-                                <li><strong>Edit All Leads:</strong> Can edit any lead</li>
-                                <li><strong>Delete Leads:</strong> Can delete leads</li>
-                                <li><strong>View Reports:</strong> Access to analytics and reports</li>
-                                <li><strong>Manage Team:</strong> Can manage team members</li>
+                            <ul class="list-unstyled small mb-0">
+                                <li><strong>Export Leads:</strong> Download CSV / export</li>
+                                <li><strong>Print Leads:</strong> Print lead list or details</li>
+                                <li><strong>View Reports:</strong> Access dashboard reporting</li>
+                                <li><strong>Manage Team:</strong> Control staff members</li>
+                                <li><strong>Admin Access:</strong> Full CRM access including all leads</li>
                             </ul>
                         </div>
                     </div>

@@ -11,7 +11,7 @@ class Permission extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'slug', 'module', 'description', 'status'];
+    protected $fillable = ['company_id', 'name', 'slug', 'module', 'description', 'status'];
 
     protected function casts(): array
     {
