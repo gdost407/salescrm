@@ -159,7 +159,7 @@ class LeadWebhookController extends Controller
             'deal_amount' => $validated['deal_amount'] ?? 0,
             'stage' => $validated['stage'] ?? $defaultStage,
             'status' => $validated['status'] ?? $defaultStatus,
-            'source' => $validated['source'] ?? 'Webhook',
+            'source' => $validated['source'] ?? 'Google',
             'assigned_to' => $validated['assigned_to'] ?? null,
             'address' => $validated['address'] ?? null,
             'city' => $validated['city'] ?? null,
