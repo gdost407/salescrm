@@ -8,6 +8,8 @@ use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
 use App\Http\Middleware\EnsureCompanyOnboardingComplete;
+use App\Http\Middleware\EnsurePermission;
+use App\Http\Middleware\EnsureLeadAccess;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -36,10 +38,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])->group(function () {
-    Route::get('calendar', [CalendarController::class, 'index'])->name('calendar');
-    Route::get('calendar/events', [CalendarController::class, 'events'])->name('calendar.events');
+    Route::get('calendar', [CalendarController::class, 'index'])->middleware(EnsureLeadAccess::class)->name('calendar');
+    Route::get('calendar/events', [CalendarController::class, 'events'])->middleware(EnsureLeadAccess::class)->name('calendar.events');
     // Sales Routes
-    Route::prefix('sales')->group(function () {
+    Route::prefix('sales')->middleware(EnsureLeadAccess::class)->group(function () {
         Route::get('kanban', [SalesController::class, 'kanban'])->name('sale-kanban');
         Route::get('leads/kanban-data', [SalesController::class, 'kanbanLeads'])->name('sales-leads.kanban-data');
         Route::patch('leads/{lead}/status', [SalesController::class, 'updateKanbanStatus'])->name('sales-leads.status');
@@ -68,14 +70,19 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
 
     // Staff Routes
     Route::prefix('staff')->group(function () {
-        Route::get('create', [StaffController::class, 'create'])->name('staff-create');
-        Route::post('create', [StaffController::class, 'store'])->name('staff.store');
-        Route::get('manage', [StaffController::class, 'manage'])->name('staff-manage');
-        Route::get('{staffUser}/edit', [StaffController::class, 'edit'])->name('staff.edit');
-        Route::put('{staffUser}', [StaffController::class, 'update'])->name('staff.update');
-        Route::post('{staffUser}/resend-password', [StaffController::class, 'resendPassword'])->name('staff.resend-password');
-        Route::get('roles', [StaffController::class, 'roles'])->name('staff-roles');
-        Route::post('roles', [StaffController::class, 'storeRole'])->name('staff.roles.store');
+        Route::get('create', [StaffController::class, 'create'])->middleware(EnsurePermission::class.':create_staff')->name('staff-create');
+        Route::post('create', [StaffController::class, 'store'])->middleware(EnsurePermission::class.':create_staff')->name('staff.store');
+        Route::get('manage', [StaffController::class, 'manage'])->middleware(EnsurePermission::class.':view_staff')->name('staff-manage');
+        Route::get('{staffUser}/edit', [StaffController::class, 'edit'])->middleware(EnsurePermission::class.':edit_staff')->name('staff.edit');
+        Route::put('{staffUser}', [StaffController::class, 'update'])->middleware(EnsurePermission::class.':edit_staff')->name('staff.update');
+        Route::post('{staffUser}/resend-password', [StaffController::class, 'resendPassword'])->middleware(EnsurePermission::class.':edit_staff')->name('staff.resend-password');
+        Route::delete('{staffUser}', [StaffController::class, 'destroy'])->middleware(EnsurePermission::class.':delete_staff')->name('staff.destroy');
+        Route::middleware(EnsurePermission::class.':manage_roles')->group(function () {
+            Route::get('roles', [StaffController::class, 'roles'])->name('staff-roles');
+            Route::post('roles', [StaffController::class, 'storeRole'])->name('staff.roles.store');
+            Route::get('roles/{role}/edit', [StaffController::class, 'editRole'])->name('staff.roles.edit');
+            Route::put('roles/{role}', [StaffController::class, 'updateRole'])->name('staff.roles.update');
+        });
     });
 
     // Integration routes

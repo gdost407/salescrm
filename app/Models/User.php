@@ -16,6 +16,9 @@ class User extends Authenticatable // implements MustVerifyEmail
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    /** @var array<string, mixed> */
+    protected $attributes = ['is_active' => true];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -121,7 +124,44 @@ class User extends Authenticatable // implements MustVerifyEmail
             return true;
         }
 
-        return $this->role?->permissions()->where('permissions.slug', $permission)->exists() ?? false;
+        $this->loadMissing('role.permissions');
+        $role = $this->role;
+
+        if (! $this->is_active || ! $role?->status || (int) $role->company_id !== (int) $this->company_id) {
+            return false;
+        }
+
+        if (! array_key_exists($permission, array_merge(...array_values(Permission::MODULES)))) {
+            return false;
+        }
+
+        $permissionSlugs = [$permission];
+        if (str_contains($permission, '_own_leads')) {
+            $permissionSlugs[] = str_replace('_own_leads', '_all_leads', $permission);
+        }
+
+        return $role->permissions
+            ->where('company_id', $this->company_id)
+            ->where('status', true)
+            ->whereIn('slug', $permissionSlugs)
+            ->isNotEmpty();
+    }
+
+    public function canManageStaffAccount(User $staff): bool
+    {
+        return (int) $staff->company_id === (int) $this->company_id
+            && $staff->user_type === 'staff'
+            && $staff->id !== $this->id;
+    }
+
+    public function canAccessLead(Lead $lead, string $action = 'view'): bool
+    {
+        if ((int) $lead->company_id !== (int) $this->company_id || ! in_array($action, ['view', 'edit', 'delete'], true)) {
+            return false;
+        }
+
+        return $this->hasPermission($action.'_all_leads')
+            || ((int) $lead->assigned_to === (int) $this->id && $this->hasPermission($action.'_own_leads'));
     }
 
     /**

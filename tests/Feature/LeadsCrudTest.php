@@ -141,6 +141,42 @@ test('a user can create update and delete a lead', function () {
     expect($lead->fresh()->trashed())->toBeTrue();
 });
 
+test('editing a lead preserves unlisted webhook locations when saving other fields', function () {
+    $company = Company::factory()->create();
+    $user = leadCrudUser($company);
+    foreach (['stage' => 'New', 'status' => 'New', 'source' => 'Self'] as $type => $name) {
+        LeadSetting::create(['setting_type' => $type, 'name' => $name, 'type' => 'system']);
+    }
+
+    $lead = Lead::factory()->for($company)->create([
+        'created_by' => $user->id,
+        'country' => 'IN',
+        'state' => 'MH',
+        'city' => 'Bombay',
+    ]);
+
+    $this->actingAs($user)->get(route('sales-leads.edit', $lead))
+        ->assertSuccessful()
+        ->assertSee('data-selected="MH"', false)
+        ->assertSee('data-selected="Bombay"', false);
+
+    $this->put(route('sales-leads.update', $lead), leadCrudPayload([
+        'name' => 'Updated webhook lead',
+        'stage' => 'New',
+        'status' => 'New',
+        'source' => 'Self',
+        'country' => 'IN',
+        'state' => 'MH',
+        'city' => 'Bombay',
+    ]))->assertSessionHasNoErrors()->assertRedirect(route('sales-all-list'));
+
+    expect($lead->fresh())
+        ->name->toBe('Updated webhook lead')
+        ->country->toBe('IN')
+        ->state->toBe('MH')
+        ->city->toBe('Bombay');
+});
+
 test('a user cannot modify another company lead', function () {
     $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
     $otherCompany = Company::create(['name' => 'Other', 'slug' => 'other']);

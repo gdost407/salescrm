@@ -206,18 +206,18 @@ class LeadWebhookController extends Controller
             ],
         ];
 
-        WebhookLog::create([
-            'company_id' => $company->id,
-            'integration_id' => $integration->id,
-            'event' => 'lead.create',
-            'request_id' => $requestId,
-            'payload' => $request->all(),
-            'response' => $successResponse,
-            'status_code' => 201,
-            'status' => 'success',
-            'received_at' => $startTime,
-            'processed_at' => now(),
-        ]);
+        // WebhookLog::create([
+        //     'company_id' => $company->id,
+        //     'integration_id' => $integration->id,
+        //     'event' => 'lead.create',
+        //     'request_id' => $requestId,
+        //     'payload' => $request->all(),
+        //     'response' => $successResponse,
+        //     'status_code' => 201,
+        //     'status' => 'success',
+        //     'received_at' => $startTime,
+        //     'processed_at' => now(),
+        // ]);
 
         return response()->json($successResponse, 201);
     }

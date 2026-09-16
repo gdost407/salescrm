@@ -118,29 +118,37 @@
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
     </li> -->
-    <li class="menu-item {{ request()->routeIs('staff-*') ? 'active open' : '' }}">
+    @if (auth()->user()->hasPermission('create_staff') || auth()->user()->hasPermission('view_staff') || auth()->user()->hasPermission('manage_roles'))
+    <li class="menu-item {{ request()->routeIs('staff-*', 'staff.*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>
         <div data-i18n="Account Settings">Staff</div>
       </a>
       <ul class="menu-sub">
+        @if (auth()->user()->hasPermission('create_staff'))
         <li class="menu-item {{ request()->routeIs('staff-create') ? 'active' : '' }}">
           <a href="{{ route('staff-create') }}" class="menu-link">
             <div data-i18n="Account">Create Staff</div>
           </a>
         </li>
+        @endif
+        @if (auth()->user()->hasPermission('view_staff'))
         <li class="menu-item {{ request()->routeIs('staff-manage') ? 'active' : '' }}">
           <a href="{{ route('staff-manage') }}" class="menu-link">
             <div data-i18n="Notifications">Manage Staff</div>
           </a>
         </li>
-        <li class="menu-item {{ request()->routeIs('staff-roles') ? 'active' : '' }}">
+        @endif
+        @if (auth()->user()->hasPermission('manage_roles'))
+        <li class="menu-item {{ request()->routeIs('staff-roles', 'staff.roles.*') ? 'active' : '' }}">
           <a href="{{ route('staff-roles') }}" class="menu-link">
             <div data-i18n="Connections">Roles</div>
           </a>
         </li>
+        @endif
       </ul>
     </li>
+    @endif
     <li class="menu-item {{ request()->routeIs('integration-*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>

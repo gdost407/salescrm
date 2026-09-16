@@ -11,6 +11,24 @@ class Permission extends Model
 {
     use HasFactory;
 
+    public const MODULES = [
+        'lead' => [
+            'view_own_leads' => 'View own leads',
+            'view_all_leads' => 'View all leads',
+            'create_leads' => 'Create leads',
+            'edit_own_leads' => 'Edit own leads',
+            'edit_all_leads' => 'Edit all leads',
+            'delete_own_leads' => 'Delete own leads',
+            'delete_all_leads' => 'Delete all leads',
+        ],
+        'staff' => [
+            'view_staff' => 'View staff',
+            'create_staff' => 'Create staff',
+            'edit_staff' => 'Edit staff',
+            'delete_staff' => 'Delete staff',
+        ],
+    ];
+
     protected $fillable = ['company_id', 'name', 'slug', 'module', 'description', 'status'];
 
     protected function casts(): array

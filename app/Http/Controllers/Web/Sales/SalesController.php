@@ -519,10 +519,10 @@ class SalesController extends Controller
 
     private function filteredLeads(Request $request, array $filters)
     {
-        $isStaffUser = $request->user()?->user_type === 'staff';
+        $isStaffUser = ! $request->user()->hasPermission('view_all_leads');
 
         return Lead::query()
-            ->where('company_id', $request->user()->company_id)
+            ->visibleTo($request->user())
             ->with('assignee:id,name')
             ->when($isStaffUser, fn ($query) => $query->where('assigned_to', $request->user()->id))
             ->when($filters['search'], function ($query, $search) {
@@ -544,7 +544,7 @@ class SalesController extends Controller
 
     private function leadListFilters(Request $request): array
     {
-        $isStaffUser = $request->user()?->user_type === 'staff';
+        $isStaffUser = ! $request->user()->hasPermission('view_all_leads');
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:255'],
             'date_range' => ['nullable', Rule::in(['today', 'week', 'month', '3_month', 'year', 'custom'])],

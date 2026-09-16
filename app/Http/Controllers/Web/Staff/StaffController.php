@@ -14,6 +14,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class StaffController extends Controller
@@ -23,6 +24,8 @@ class StaffController extends Controller
      */
     public function create(Request $request): View
     {
+        $this->ensureDefaultPermissions($request->user()->company_id);
+
         return view('app.staff.create', [
             'roles' => Role::query()
                 ->where('company_id', $request->user()->company_id)
@@ -36,6 +39,8 @@ class StaffController extends Controller
      */
     public function store(StoreStaffRequest $request): RedirectResponse
     {
+        abort_if($request->filled('role_id') && ! $request->user()->hasPermission('manage_roles'), 403, 'Role assignment requires Manage Roles & Permissions access.');
+
         $temporaryPassword = Str::random(16);
 
         $staff = DB::transaction(function () use ($request, $temporaryPassword): User {
@@ -64,7 +69,7 @@ class StaffController extends Controller
 
         SendStaffCredentialsEmail::dispatch($staff, $temporaryPassword);
 
-        return redirect()->route('staff-manage')->with('message', 'Staff member created successfully!');
+        return redirect()->route($request->user()->hasPermission('view_staff') ? 'staff-manage' : 'staff-create')->with('message', 'Staff member created successfully!');
     }
 
     /**
@@ -73,6 +78,7 @@ class StaffController extends Controller
     public function manage(Request $request): View
     {
         $staffMembers = User::query()
+            ->with('role.permissions')
             ->where('company_id', $request->user()->company_id)
             ->where('user_type', 'staff')
             ->latest()
@@ -90,6 +96,8 @@ class StaffController extends Controller
         if ($currentUser && $staffUser->company_id !== $currentUser->company_id) {
             abort(404);
         }
+
+        $this->ensureDefaultPermissions($currentUser->company_id);
 
         return view('app.staff.edit', [
             'staff' => $staffUser,
@@ -110,9 +118,11 @@ class StaffController extends Controller
             abort(404);
         }
 
+        abort_if($request->exists('role_id') && (int) $request->input('role_id') !== (int) $staffUser->role_id && ! $currentUser->hasPermission('manage_roles'), 403, 'Role assignment requires Manage Roles & Permissions access.');
+
         $staffUser->update($request->validated());
 
-        return redirect()->route('staff-manage')->with('message', 'Staff member updated successfully!');
+        return redirect()->route($currentUser->hasPermission('view_staff') ? 'staff-manage' : 'staff.edit', $currentUser->hasPermission('view_staff') ? [] : [$staffUser])->with('message', 'Staff member updated successfully!');
     }
 
     /**
@@ -130,13 +140,13 @@ class StaffController extends Controller
 
         SendStaffCredentialsEmail::dispatch($staffUser, $temporaryPassword);
 
-        return redirect()->route('staff-manage')->with('message', 'Password email sent to '.$staffUser->email.' successfully!');
+        return redirect()->route($currentUser->hasPermission('view_staff') ? 'staff-manage' : 'dashboard')->with('message', 'Password email sent to '.$staffUser->email.' successfully!');
     }
 
     /**
      * Show roles and permissions management.
      */
-    public function roles(Request $request): View
+    public function roles(Request $request, ?Role $editingRole = null): View
     {
         $companyId = $request->user()->company_id;
 
@@ -154,48 +164,61 @@ class StaffController extends Controller
             ->orderBy('name')
             ->get();
 
-        return view('app.staff.roles', compact('roles', 'permissions'));
+        return view('app.staff.roles', compact('roles', 'permissions', 'editingRole'));
+    }
+
+    public function editRole(Request $request, Role $role): View
+    {
+        abort_unless((int) $role->company_id === (int) $request->user()->company_id, 404);
+
+        return $this->roles($request, $role->load('permissions'));
+    }
+
+    public function updateRole(Request $request, Role $role): RedirectResponse
+    {
+        abort_unless((int) $role->company_id === (int) $request->user()->company_id, 404);
+
+        $validated = $this->validatedRoleData($request);
+
+        DB::transaction(function () use ($role, $validated, $request): void {
+            $role->update([
+                'name' => $validated['name'],
+                'description' => $validated['description'] ?? null,
+            ]);
+            $role->permissions()->sync(Permission::query()
+                ->where('company_id', $request->user()->company_id)
+                ->whereIn('slug', $validated['permissions'] ?? [])
+                ->pluck('id'));
+        });
+
+        return to_route('staff-roles')->with('message', 'Role updated successfully.');
     }
 
     public function storeRole(Request $request): RedirectResponse
     {
         $companyId = $request->user()->company_id;
 
-        $validated = $request->validate([
-            'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:120'],
-            'description' => ['nullable', 'string', 'max:500'],
-            'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['string', 'max:120'],
-        ]);
-
-        $this->ensureDefaultPermissions($companyId);
+        $validated = $this->validatedRoleData($request);
 
         $slug = $validated['slug'] ?? Str::slug($validated['name']);
         $slug = $this->uniqueRoleSlug($companyId, $slug);
 
-        $role = Role::query()->firstOrCreate(
-            ['company_id' => $companyId, 'slug' => $slug],
-            [
+        DB::transaction(function () use ($companyId, $slug, $validated): void {
+            $role = Role::query()->create([
                 'company_id' => $companyId,
                 'name' => $validated['name'],
                 'slug' => $slug,
                 'description' => $validated['description'] ?? null,
                 'status' => true,
-            ]
-        );
+            ]);
 
-        $role->update([
-            'name' => $validated['name'],
-            'description' => $validated['description'] ?? null,
-        ]);
+            $selectedPermissions = Permission::query()
+                ->where('company_id', $companyId)
+                ->whereIn('slug', $validated['permissions'] ?? [])
+                ->pluck('id');
 
-        $selectedPermissions = Permission::query()
-            ->where('company_id', $companyId)
-            ->whereIn('slug', $validated['permissions'] ?? [])
-            ->pluck('id');
-
-        $role->permissions()->sync($selectedPermissions);
+            $role->permissions()->sync($selectedPermissions);
+        });
 
         return redirect()->route('staff-roles')->with('message', 'Role created successfully.');
     }
@@ -214,6 +237,23 @@ class StaffController extends Controller
         return $candidate;
     }
 
+    /**
+     * @return array{name: string, slug?: ?string, description?: ?string, permissions?: ?array<int, string>}
+     */
+    private function validatedRoleData(Request $request): array
+    {
+        $companyId = $request->user()->company_id;
+        $this->ensureDefaultPermissions($companyId);
+
+        return $request->validate([
+            'name' => ['required', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:120'],
+            'description' => ['nullable', 'string', 'max:500'],
+            'permissions' => ['nullable', 'array'],
+            'permissions.*' => ['required', 'string', 'distinct', Rule::exists('permissions', 'slug')->where('company_id', $companyId)],
+        ]);
+    }
+
     private function ensureDefaultPermissions(int $companyId): void
     {
         $defaultPermissions = [
@@ -226,6 +266,11 @@ class StaffController extends Controller
             ['name' => 'Print Leads', 'slug' => 'print_leads', 'module' => 'lead'],
             ['name' => 'View Reports', 'slug' => 'view_reports', 'module' => 'report'],
             ['name' => 'Manage Team', 'slug' => 'manage_team', 'module' => 'staff'],
+            ['name' => 'View Staff', 'slug' => 'view_staff', 'module' => 'staff'],
+            ['name' => 'Create Staff', 'slug' => 'create_staff', 'module' => 'staff'],
+            ['name' => 'Edit Staff', 'slug' => 'edit_staff', 'module' => 'staff'],
+            ['name' => 'Resend Staff Password', 'slug' => 'resend_staff_password', 'module' => 'staff'],
+            ['name' => 'Manage Roles & Permissions', 'slug' => 'manage_roles', 'module' => 'staff'],
             ['name' => 'Admin Access', 'slug' => 'admin_access', 'module' => 'admin'],
         ];
 
@@ -243,7 +288,7 @@ class StaffController extends Controller
             );
         }
 
-        Role::query()->firstOrCreate(
+        $adminRole = Role::query()->firstOrCreate(
             ['company_id' => $companyId, 'slug' => 'admin'],
             [
                 'company_id' => $companyId,
@@ -254,7 +299,7 @@ class StaffController extends Controller
             ]
         );
 
-        Role::query()->firstOrCreate(
+        $salesStaff = Role::query()->firstOrCreate(
             ['company_id' => $companyId, 'slug' => 'sales-staff'],
             [
                 'company_id' => $companyId,
@@ -265,18 +310,14 @@ class StaffController extends Controller
             ]
         );
 
-        $adminRole = Role::query()->where('company_id', $companyId)->where('slug', 'admin')->first();
-        $salesStaff = Role::query()->where('company_id', $companyId)->where('slug', 'sales-staff')->first();
-
-        if ($adminRole) {
+        if ($adminRole->wasRecentlyCreated) {
             $adminRole->permissions()->sync(Permission::query()->where('company_id', $companyId)->pluck('id'));
         }
 
-        if ($salesStaff) {
+        if ($salesStaff->wasRecentlyCreated) {
             $salesStaff->permissions()->sync(
                 Permission::query()->where('company_id', $companyId)->whereIn('slug', ['view_leads', 'create_leads', 'edit_own_leads', 'export_leads', 'print_leads'])->pluck('id')
             );
         }
     }
 }
-
