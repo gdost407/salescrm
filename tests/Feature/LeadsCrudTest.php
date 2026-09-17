@@ -6,8 +6,11 @@ use App\Models\Country;
 use App\Models\Lead;
 use App\Models\LeadActivity;
 use App\Models\LeadSetting;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\State;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -38,9 +41,17 @@ function leadCrudPayload(array $overrides = []): array
     ], $overrides);
 }
 
-function leadCrudUser(Company $company): User
+function leadCrudUser(Company $company, array $permissions = []): User
 {
-    return User::factory()->for($company)->create(['is_active' => true]);
+    $user = User::factory()->for($company)->create(['is_active' => true]);
+    if ($permissions !== []) {
+        app(RolePermissionSeeder::class)->seedCompany($company->id);
+        $role = Role::create(['company_id' => $company->id, 'name' => 'Test permissions', 'slug' => 'test-permissions', 'status' => true]);
+        $role->permissions()->sync(Permission::where('company_id', $company->id)->whereIn('slug', $permissions)->pluck('id'));
+        $user->update(['role_id' => $role->id]);
+    }
+
+    return $user;
 }
 
 test('kanban status columns keep system defaults first, custom statuses next, and trailing system statuses last', function () {
@@ -403,7 +414,7 @@ test('a user can view a company lead with its details', function () {
 
 test('a user can add an activity to a lead', function () {
     $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
-    $user = leadCrudUser($company);
+    $user = leadCrudUser($company, ['view_all_leads', 'create_all_activities']);
     $lead = Lead::create([
         'company_id' => $company->id,
         'created_by' => $user->id,
@@ -484,7 +495,7 @@ test('kanban supports in-place lead creation, details, and status changes', func
 
 test('a visit activity can update the lead address', function () {
     $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
-    $user = leadCrudUser($company);
+    $user = leadCrudUser($company, ['view_all_leads', 'edit_all_leads', 'schedule_all_followups']);
     $lead = Lead::create([
         'company_id' => $company->id,
         'created_by' => $user->id,

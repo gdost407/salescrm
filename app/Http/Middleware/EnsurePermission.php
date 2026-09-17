@@ -18,7 +18,8 @@ class EnsurePermission
         abort_unless($request->user()?->hasPermission($permission), 403);
 
         if ($staff = $request->route('staffUser')) {
-            abort_unless($request->user()->canManageStaffAccount($staff), 403);
+            abort_unless((int) $staff->company_id === (int) $request->user()->company_id, 404);
+            abort_unless($request->user()->canManageStaffAccount($staff, explode('_', $permission)[0]), 403);
         }
 
         return $next($request);

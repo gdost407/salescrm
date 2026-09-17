@@ -12,6 +12,11 @@
       <div class="layout-page">
         @include('partials.nav')
         <div class="content-wrapper">
+          @if (session('access_error'))
+            <div class="container-xxl pt-3">
+              <div class="alert alert-danger" role="alert">{{ session('access_error') }}</div>
+            </div>
+          @endif
           @yield('content')
           @include('partials.footer')
           <div class="content-backdrop fade"></div>

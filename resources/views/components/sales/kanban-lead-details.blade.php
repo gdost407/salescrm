@@ -10,7 +10,9 @@
 
 <div class="d-flex align-items-center justify-content-between border-top mt-4 pt-3">
     <h6 class="mb-0">Recent activity</h6>
-    <button type="button" class="btn btn-sm btn-primary" data-lead-activity="{{ $lead->id }}"><i class="bx bx-plus me-1"></i>Add activity</button>
+    @if (auth()->user()->canAccessLeadActivity($lead, 'create', 'notes') || auth()->user()->canAccessLeadActivity($lead, 'create', 'followup'))
+      <button type="button" class="btn btn-sm btn-primary" data-lead-activity="{{ $lead->id }}"><i class="bx bx-plus me-1"></i>Add activity</button>
+    @endif
 </div>
 <div class="mt-3">
     @forelse ($lead->activities->take(5) as $activity)

@@ -40,7 +40,7 @@ test('company owner can create a saved role with a slug and permissions', functi
         'name' => 'Sales Staff',
         'slug' => 'sales-staff',
         'description' => 'Can manage assigned leads',
-        'permissions' => ['view_leads', 'create_leads', 'edit_own_leads', 'export_leads'],
+        'permissions' => ['view_own_leads', 'create_leads', 'edit_own_leads', 'view_all_leads'],
     ]);
 
     $response->assertRedirect(route('staff-roles', absolute: false));
@@ -49,7 +49,7 @@ test('company owner can create a saved role with a slug and permissions', functi
 
     expect($role->name)->toBe('Sales Staff')
         ->and($role->permissions()->pluck('slug')->sort()->values()->all())
-        ->toBe(['create_leads', 'edit_own_leads', 'export_leads', 'view_leads']);
+        ->toBe(['create_leads', 'edit_own_leads', 'view_all_leads', 'view_own_leads']);
 });
 
 test('staff can be assigned a saved role and the role grants access to the configured section', function () {
@@ -91,12 +91,12 @@ test('different companies can initialize identical default roles and permissions
     $this->actingAs($otherOwner)->get(route('staff-roles'))->assertSuccessful();
 
     expect(Role::where('slug', 'admin')->count())->toBe(2)
-        ->and(Permission::where('slug', 'view_leads')->count())->toBe(2);
+        ->and(Permission::where('slug', 'view_own_leads')->count())->toBe(2);
 
     foreach ([$this->company, $otherCompany] as $company) {
         $admin = Role::where('company_id', $company->id)->where('slug', 'admin')->firstOrFail();
         expect($admin->permissions()->where('permissions.company_id', '!=', $company->id)->exists())->toBeFalse()
-            ->and($admin->permissions()->count())->toBe(15);
+            ->and($admin->permissions()->count())->toBe(23);
     }
 });
 
@@ -113,7 +113,7 @@ test('editing an existing role keeps its identity and saves exact permissions ac
     $this->put(route('staff.roles.update', $role), [
         'name' => 'Read Only Sales',
         'description' => 'View only',
-        'permissions' => ['view_leads'],
+        'permissions' => ['view_own_leads'],
     ])->assertSessionHasNoErrors()->assertRedirect(route('staff-roles'));
 
     $this->get(route('staff-roles'))->assertSuccessful();
@@ -121,7 +121,7 @@ test('editing an existing role keeps its identity and saves exact permissions ac
 
     expect($role->fresh()->name)->toBe('Read Only Sales')
         ->and($staff->fresh()->role_id)->toBe($role->id)
-        ->and($role->permissions()->pluck('slug')->all())->toBe(['view_leads']);
+        ->and($role->permissions()->pluck('slug')->all())->toBe(['view_own_leads']);
 
     $this->put(route('staff.roles.update', $role), ['name' => 'No Access'])
         ->assertSessionHasNoErrors()->assertRedirect(route('staff-roles'));
@@ -145,8 +145,8 @@ test('owners cannot edit another company role or select its custom permissions',
 test('staff cannot grant themselves permissions through role management', function () {
     $staff = User::factory()->for($this->company)->create(['user_type' => 'staff']);
 
-    $this->actingAs($staff)->get(route('staff-roles'))->assertForbidden();
-    $this->post(route('staff.roles.store'), ['name' => 'Admin', 'permissions' => ['admin_access']])->assertForbidden();
+    $this->actingAs($staff)->get(route('staff-roles'))->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
+    $this->post(route('staff.roles.store'), ['name' => 'Admin', 'permissions' => ['edit_staff']])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
 });
 
 test('inactive and foreign roles or permissions do not grant access', function () {
@@ -156,30 +156,30 @@ test('inactive and foreign roles or permissions do not grant access', function (
 
     $this->actingAs($staff)->get(route('staff-roles'))->assertSuccessful();
     $role->update(['status' => false]);
-    expect($staff->fresh()->hasPermission('admin_access'))->toBeFalse();
+    expect($staff->fresh()->hasPermission('edit_staff'))->toBeFalse();
 
     $role->update(['status' => true]);
-    Permission::where('company_id', $this->company->id)->where('slug', 'admin_access')->update(['status' => false]);
-    expect($staff->fresh()->hasPermission('admin_access'))->toBeFalse();
+    Permission::where('company_id', $this->company->id)->where('slug', 'edit_staff')->update(['status' => false]);
+    expect($staff->fresh()->hasPermission('edit_staff'))->toBeFalse();
 
     $otherCompany = Company::factory()->create();
     $staff->update(['company_id' => $otherCompany->id]);
-    expect($staff->fresh()->hasPermission('view_leads'))->toBeFalse();
+    expect($staff->fresh()->hasPermission('view_own_leads'))->toBeFalse();
 });
 
 test('role forms group lead and staff permissions and preserve selections', function () {
     $this->actingAs($this->owner)->get(route('staff-roles'))
         ->assertSuccessful()
-        ->assertSeeInOrder(['Lead permissions', 'Staff permissions', 'Reports', 'Administration'])
+        ->assertSeeInOrder(['Lead permissions', 'Staff permissions'])
         ->assertSee('value="view_staff"', false)
         ->assertSee('value="create_staff"', false)
         ->assertSee('value="edit_staff"', false)
-        ->assertSee('value="resend_staff_password"', false)
-        ->assertSee('value="manage_roles"', false);
+        ->assertDontSee('value="admin_access"', false)
+        ->assertSee('value="edit_staff"', false);
 
     $this->post(route('staff.roles.store'), [
         'name' => 'Lead and Staff Reader',
-        'permissions' => ['view_leads', 'view_staff'],
+        'permissions' => ['view_own_leads', 'view_staff'],
     ])->assertSessionHasNoErrors();
     $role = Role::where('company_id', $this->company->id)->where('slug', 'lead-and-staff-reader')->firstOrFail();
     $response = $this->get(route('staff.roles.edit', $role))->assertSuccessful();
@@ -188,7 +188,7 @@ test('role forms group lead and staff permissions and preserve selections', func
     $xpath = new DOMXPath($document);
 
     expect($xpath->query('//fieldset[legend="Staff permissions"]//input[@value="view_staff" and @checked]')->length)->toBe(1)
-        ->and($xpath->query('//fieldset[legend="Lead permissions"]//input[@value="view_leads" and @checked]')->length)->toBe(1)
+        ->and($xpath->query('//fieldset[legend="Lead permissions"]//input[@value="view_own_leads" and @checked]')->length)->toBe(1)
         ->and($xpath->query('//input[@value="edit_staff" and @checked]')->length)->toBe(0);
 });
 
@@ -200,31 +200,51 @@ test('staff routes enforce each assigned action independently', function (string
     $this->actingAs($staff);
 
     foreach ([
-        'view_staff' => ['get', route('staff-manage')],
-        'create_staff' => ['get', route('staff-create')],
-        'edit_staff' => ['get', route('staff.edit', $target)],
-        'resend_staff_password' => ['post', route('staff.resend-password', $target)],
-        'manage_roles' => ['get', route('staff-roles')],
-    ] as $required => [$method, $url]) {
+        ['view_staff', 'get', route('staff-manage')],
+        ['create_staff', 'get', route('staff-create')],
+        ['edit_staff', 'get', route('staff.edit', $staff)],
+        ['edit_staff', 'post', route('staff.resend-password', $staff)],
+        ['edit_staff', 'get', route('staff.edit', $target)],
+        ['edit_staff', 'get', route('staff-roles')],
+    ] as [$required, $method, $url]) {
         $response = $this->{$method}($url);
-        if ($required !== $permission) {
-            $response->assertForbidden();
+        $allowed = $required === $permission;
+        if (! $allowed) {
+            $response->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
         } elseif ($method === 'post') {
             $response->assertRedirect();
         } else {
             $response->assertSuccessful();
         }
     }
-})->with(['view_staff', 'create_staff', 'edit_staff', 'resend_staff_password', 'manage_roles']);
+})->with(['view_staff', 'create_staff', 'edit_staff']);
 
-test('legacy manage team grants staff actions without role management', function () {
+test('staff edit does not grant unrelated actions', function () {
     $this->actingAs($this->owner)->get(route('staff-roles'))->assertSuccessful();
-    $staff = roleAccessStaff($this->company, ['manage_team']);
-
-    foreach (['view_staff', 'create_staff', 'edit_staff', 'resend_staff_password'] as $permission) {
-        expect($staff->hasPermission($permission))->toBeTrue();
+    $staff = roleAccessStaff($this->company, ['edit_staff']);
+    foreach (['view_staff', 'create_staff', 'delete_staff', 'admin_access', 'manage_roles', 'manage_team'] as $permission) {
+        expect($staff->hasPermission($permission))->toBeFalse();
     }
-    expect($staff->hasPermission('manage_roles'))->toBeFalse();
+    expect($staff->hasPermission('edit_staff'))->toBeTrue();
+});
+
+test('staff cannot expand their own role or grant permissions they do not hold', function () {
+    $this->actingAs($this->owner)->get(route('staff-roles'))->assertSuccessful();
+    $staff = roleAccessStaff($this->company, ['edit_staff']);
+    $this->actingAs($staff)->put(route('staff.roles.update', $staff->role_id), [
+        'name' => 'My changed role', 'permissions' => ['edit_staff'],
+    ])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
+    $this->post(route('staff.roles.store'), [
+        'name' => 'Stronger', 'permissions' => ['delete_all_leads'],
+    ])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
+    $this->post(route('staff.roles.store'), [
+        'name' => 'Administration', 'permissions' => ['admin_access'],
+    ])->assertInvalid(['permissions.0']);
+    $this->put(route('staff.update', $staff), [
+        'name' => $staff->name, 'email' => $staff->email, 'department' => 'Sales',
+        'job_role' => 'Staff', 'is_active' => true, 'role_id' => null,
+    ])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
+    expect($staff->fresh()->role_id)->toBe($staff->role_id);
 });
 
 test('staff action buttons and navigation reflect read only access', function () {
@@ -237,26 +257,25 @@ test('staff action buttons and navigation reflect read only access', function ()
         ->assertDontSee(route('staff.resend-password', $target), false)
         ->assertDontSee(route('staff-create'), false)
         ->assertDontSee(route('staff-roles'), false);
-    $this->post(route('staff.store'), [])->assertForbidden();
-    $this->put(route('staff.update', $target), [])->assertForbidden();
+    $this->post(route('staff.store'), [])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
+    $this->put(route('staff.update', $target), [])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
 });
 
-test('staff editors cannot assign stronger roles or modify administrator accounts', function () {
+test('staff editors cannot assign stronger roles or modify company owners', function () {
     Queue::fake();
     $this->actingAs($this->owner)->get(route('staff-roles'))->assertSuccessful();
-    $staff = roleAccessStaff($this->company, ['manage_team']);
-    $admin = roleAccessStaff($this->company, ['admin_access']);
+    $staff = roleAccessStaff($this->company, ['edit_staff']);
+    $admin = roleAccessStaff($this->company, ['edit_staff', 'delete_all_leads']);
     $target = User::factory()->for($this->company)->create(['user_type' => 'staff']);
     $payload = [
         'name' => 'Updated staff', 'email' => $target->email, 'department' => 'Sales',
         'job_role' => 'Employee', 'is_active' => true,
     ];
     $this->actingAs($staff)->put(route('staff.update', $target), $payload)->assertSessionHasNoErrors()->assertRedirect();
-    $this->put(route('staff.update', $target), [...$payload, 'role_id' => $admin->role_id])->assertForbidden();
-    $this->post(route('staff.store'), [...$payload, 'email' => 'new-staff@example.com', 'role_id' => $admin->role_id])->assertForbidden();
-    $this->get(route('staff.edit', $admin))->assertForbidden();
-    $this->post(route('staff.resend-password', $admin))->assertForbidden();
-    $this->get(route('staff.edit', $this->owner))->assertForbidden();
+    $this->put(route('staff.update', $target), [...$payload, 'role_id' => $admin->role_id])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
+    $this->post(route('staff.store'), [...$payload, 'email' => 'new-staff@example.com', 'role_id' => $admin->role_id])->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
+    $this->get(route('staff.edit', $admin))->assertSuccessful();
+    $this->get(route('staff.edit', $this->owner))->assertRedirect(route('dashboard'))->assertSessionHas('access_error');
     expect($target->fresh()->role_id)->toBeNull();
     Queue::assertNothingPushed();
 });

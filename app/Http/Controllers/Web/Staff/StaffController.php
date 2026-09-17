@@ -10,8 +10,10 @@ use App\Models\Company;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -39,7 +41,10 @@ class StaffController extends Controller
      */
     public function store(StoreStaffRequest $request): RedirectResponse
     {
-        abort_if($request->filled('role_id') && ! $request->user()->hasPermission('manage_roles'), 403, 'Role assignment requires Manage Roles & Permissions access.');
+        abort_if($request->filled('role_id') && ! $request->user()->hasPermission('edit_staff'), 403, 'Role assignment requires Staff Edit access.');
+        if ($request->filled('role_id')) {
+            $this->ensureRoleCanBeAssigned($request, (int) $request->input('role_id'));
+        }
 
         $temporaryPassword = Str::random(16);
 
@@ -118,7 +123,13 @@ class StaffController extends Controller
             abort(404);
         }
 
-        abort_if($request->exists('role_id') && (int) $request->input('role_id') !== (int) $staffUser->role_id && ! $currentUser->hasPermission('manage_roles'), 403, 'Role assignment requires Manage Roles & Permissions access.');
+        abort_if($request->exists('role_id') && (int) $request->input('role_id') !== (int) $staffUser->role_id && ! $currentUser->hasPermission('edit_staff'), 403, 'Role assignment requires Staff Edit access.');
+        if ($request->exists('role_id') && (int) $request->input('role_id') !== (int) $staffUser->role_id) {
+            abort_if((int) $staffUser->id === (int) $currentUser->id, 403, 'You cannot change your own access role.');
+            if ($request->filled('role_id')) {
+                $this->ensureRoleCanBeAssigned($request, (int) $request->input('role_id'));
+            }
+        }
 
         $staffUser->update($request->validated());
 
@@ -128,6 +139,22 @@ class StaffController extends Controller
     /**
      * Resend password credentials email to staff user.
      */
+    public function destroy(Request $request, User $staffUser): RedirectResponse
+    {
+        $deletingSelf = (int) $request->user()->id === (int) $staffUser->id;
+        $staffUser->delete();
+
+        if ($deletingSelf) {
+            Auth::logout();
+            $request->session()->invalidate();
+            $request->session()->regenerateToken();
+
+            return to_route('login');
+        }
+
+        return to_route($request->user()->hasPermission('view_staff') ? 'staff-manage' : 'dashboard')->with('message', 'Staff member deleted.');
+    }
+
     public function resendPassword(Request $request, User $staffUser): RedirectResponse
     {
         $currentUser = $request->user();
@@ -154,12 +181,13 @@ class StaffController extends Controller
 
         $roles = Role::query()
             ->where('company_id', $companyId)
-            ->with('permissions:id,slug,name,module')
+            ->with(['permissions' => fn ($query) => $query->whereIn('slug', array_keys(array_merge(...array_values(Permission::MODULES))))])
             ->orderBy('name')
             ->get();
 
         $permissions = Permission::query()
             ->where('company_id', $companyId)
+            ->whereIn('slug', array_keys(array_merge(...array_values(Permission::MODULES))))
             ->orderBy('module')
             ->orderBy('name')
             ->get();
@@ -177,6 +205,7 @@ class StaffController extends Controller
     public function updateRole(Request $request, Role $role): RedirectResponse
     {
         abort_unless((int) $role->company_id === (int) $request->user()->company_id, 404);
+        abort_if((int) $request->user()->role_id === (int) $role->id, 403, 'You cannot change your own access role.');
 
         $validated = $this->validatedRoleData($request);
 
@@ -245,79 +274,31 @@ class StaffController extends Controller
         $companyId = $request->user()->company_id;
         $this->ensureDefaultPermissions($companyId);
 
-        return $request->validate([
+        $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'slug' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string', 'max:500'],
             'permissions' => ['nullable', 'array'],
-            'permissions.*' => ['required', 'string', 'distinct', Rule::exists('permissions', 'slug')->where('company_id', $companyId)],
+            'permissions.*' => ['required', 'string', 'distinct', Rule::in(array_keys(array_merge(...array_values(Permission::MODULES)))), Rule::exists('permissions', 'slug')->where('company_id', $companyId)],
         ]);
+
+        foreach ($validated['permissions'] ?? [] as $permission) {
+            abort_unless($request->user()->hasPermission($permission), 403, 'You can only grant permissions you hold.');
+        }
+
+        return $validated;
+    }
+
+    private function ensureRoleCanBeAssigned(Request $request, int $roleId): void
+    {
+        $role = Role::query()->where('company_id', $request->user()->company_id)->where('status', true)->with('permissions')->findOrFail($roleId);
+        foreach ($role->permissions->where('status', true)->whereIn('slug', array_keys(array_merge(...array_values(Permission::MODULES)))) as $permission) {
+            abort_unless((int) $permission->company_id === (int) $request->user()->company_id && $request->user()->hasPermission($permission->slug), 403, 'You can only assign permissions you hold.');
+        }
     }
 
     private function ensureDefaultPermissions(int $companyId): void
     {
-        $defaultPermissions = [
-            ['name' => 'View Leads', 'slug' => 'view_leads', 'module' => 'lead'],
-            ['name' => 'Create Leads', 'slug' => 'create_leads', 'module' => 'lead'],
-            ['name' => 'Edit Own Leads', 'slug' => 'edit_own_leads', 'module' => 'lead'],
-            ['name' => 'Edit All Leads', 'slug' => 'edit_all_leads', 'module' => 'lead'],
-            ['name' => 'Delete Leads', 'slug' => 'delete_leads', 'module' => 'lead'],
-            ['name' => 'Export Leads', 'slug' => 'export_leads', 'module' => 'lead'],
-            ['name' => 'Print Leads', 'slug' => 'print_leads', 'module' => 'lead'],
-            ['name' => 'View Reports', 'slug' => 'view_reports', 'module' => 'report'],
-            ['name' => 'Manage Team', 'slug' => 'manage_team', 'module' => 'staff'],
-            ['name' => 'View Staff', 'slug' => 'view_staff', 'module' => 'staff'],
-            ['name' => 'Create Staff', 'slug' => 'create_staff', 'module' => 'staff'],
-            ['name' => 'Edit Staff', 'slug' => 'edit_staff', 'module' => 'staff'],
-            ['name' => 'Resend Staff Password', 'slug' => 'resend_staff_password', 'module' => 'staff'],
-            ['name' => 'Manage Roles & Permissions', 'slug' => 'manage_roles', 'module' => 'staff'],
-            ['name' => 'Admin Access', 'slug' => 'admin_access', 'module' => 'admin'],
-        ];
-
-        foreach ($defaultPermissions as $permission) {
-            Permission::query()->firstOrCreate(
-                ['company_id' => $companyId, 'slug' => $permission['slug']],
-                [
-                    'company_id' => $companyId,
-                    'name' => $permission['name'],
-                    'slug' => $permission['slug'],
-                    'module' => $permission['module'],
-                    'description' => $permission['name'],
-                    'status' => true,
-                ]
-            );
-        }
-
-        $adminRole = Role::query()->firstOrCreate(
-            ['company_id' => $companyId, 'slug' => 'admin'],
-            [
-                'company_id' => $companyId,
-                'name' => 'Administrator',
-                'slug' => 'admin',
-                'description' => 'Full system access',
-                'status' => true,
-            ]
-        );
-
-        $salesStaff = Role::query()->firstOrCreate(
-            ['company_id' => $companyId, 'slug' => 'sales-staff'],
-            [
-                'company_id' => $companyId,
-                'name' => 'Sales Staff',
-                'slug' => 'sales-staff',
-                'description' => 'Can manage assigned leads',
-                'status' => true,
-            ]
-        );
-
-        if ($adminRole->wasRecentlyCreated) {
-            $adminRole->permissions()->sync(Permission::query()->where('company_id', $companyId)->pluck('id'));
-        }
-
-        if ($salesStaff->wasRecentlyCreated) {
-            $salesStaff->permissions()->sync(
-                Permission::query()->where('company_id', $companyId)->whereIn('slug', ['view_leads', 'create_leads', 'edit_own_leads', 'export_leads', 'print_leads'])->pluck('id')
-            );
-        }
+        app(RolePermissionSeeder::class)->seedCompany($companyId);
     }
 }

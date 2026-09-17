@@ -16,10 +16,27 @@ class EnsureLeadAccess
     public function handle(Request $request, Closure $next): Response
     {
         $method = $request->route()->getActionMethod();
+        $activityAction = match ($method) {
+            'storeLeadActivity' => 'create',
+            'updateLeadActivity' => 'edit',
+            'destroyLeadActivity' => 'delete',
+            'completeLeadActivity' => 'complete',
+            default => null,
+        };
+        if ($activityAction !== null) {
+            $lead = $request->route('lead');
+            $activity = $request->route('activity');
+            abort_unless((int) $lead->company_id === (int) $request->user()->company_id, 404);
+            abort_if($activity && ((int) $activity->company_id !== (int) $lead->company_id || (int) $activity->lead_id !== (int) $lead->id), 404);
+            $type = $activity?->activity_type ?? $request->input('activity_type');
+            abort_unless(is_string($type) && $request->user()->canAccessLeadActivity($lead, $activityAction, $type, $activity), 403);
+            abort_if($request->boolean('mark_as_lead_address') && ! $request->user()->canAccessLead($lead, 'edit'), 403);
+
+            return $next($request);
+        }
         $action = match ($method) {
             'createLead', 'storeLead', 'importLeads', 'downloadLeadImportSample' => 'create',
-            'editLead', 'updateLead', 'assignKanbanLead', 'updateKanbanStatus',
-            'storeLeadActivity', 'updateLeadActivity', 'destroyLeadActivity', 'completeLeadActivity' => 'edit',
+            'editLead', 'updateLead', 'assignKanbanLead', 'updateKanbanStatus' => 'edit',
             'destroyLead' => 'delete',
             'leadSettings', 'storeLeadSetting', 'updateLeadSetting', 'destroyLeadSetting' => 'settings',
             'kanban', 'kanbanLeads', 'allList', 'exportLeads', 'kanbanLeadDetails',

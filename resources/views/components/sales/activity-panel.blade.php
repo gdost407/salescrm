@@ -8,7 +8,9 @@
   <div class="card mb-4">
     <div class="card-header d-flex align-items-center justify-content-between">
       <h6 class="mb-0">{{ $label }}</h6>
-      <button type="button" class="btn btn-sm btn-primary" data-activity-add data-bs-toggle="offcanvas" data-bs-target="#{{ $panelId }}-form"><i class="bx bx-plus me-1"></i> Add</button>
+      @if (auth()->user()->canAccessLeadActivity($lead, 'create', $type))
+        <button type="button" class="btn btn-sm btn-primary" data-activity-add data-bs-toggle="offcanvas" data-bs-target="#{{ $panelId }}-form"><i class="bx bx-plus me-1"></i> Add</button>
+      @endif
     </div>
     <div class="card-body">
       @forelse ($entries as $entry)
@@ -17,16 +19,20 @@
             <div><strong>{{ $entry->subject ?: $label }}</strong><small class="d-block text-body-secondary">{{ $entry->created_at->diffForHumans() }}</small></div>
             <div class="text-nowrap">
               @php($activityStatus = $entry->metadata['activity_status'] ?? $entry->status)
-              @if (($type === 'notes' || $type === 'call') ? $entry->id === $latestNoteOrCall : $activityStatus === 'pending')
+              @if (auth()->user()->canAccessLeadActivity($lead, 'edit', $type, $entry) && (($type === 'notes' || $type === 'call') ? $entry->id === $latestNoteOrCall : $activityStatus === 'pending'))
                 <button type="button" class="btn btn-sm btn-icon btn-outline-primary activity-edit" title="Edit" data-bs-toggle="offcanvas" data-bs-target="#{{ $panelId }}-form" data-action="{{ route('sales-lead-activities.update', [$lead, $entry]) }}" data-summary="{{ $entry->summary }}" data-scheduled-at="{{ $entry->scheduled_at?->format('Y-m-d\\TH:i') }}"><i class="bx bx-edit"></i></button>
               @endif
               @if ($activityStatus === 'pending' && ! in_array($type, ['notes', 'call'], true))
+                @if (auth()->user()->canAccessLeadActivity($lead, 'complete', $type, $entry))
                 <button type="button" class="btn btn-sm btn-icon btn-outline-success" title="Complete" data-bs-toggle="offcanvas" data-bs-target="#complete-{{ $entry->id }}"><i class="bx bx-check"></i></button>
+                @endif
+                @if (auth()->user()->canAccessLeadActivity($lead, 'delete', $type, $entry))
                 <form action="{{ route('sales-lead-activities.destroy', [$lead, $entry]) }}" method="POST" class="d-inline" data-activity-delete onsubmit="return confirm('Delete this activity?');">
                   @csrf
                   @method('DELETE')
                   <button type="submit" class="btn btn-sm btn-icon btn-outline-danger" title="Delete"><i class="bx bx-trash"></i></button>
                 </form>
+                @endif
               @endif
             </div>
           </div>
@@ -47,7 +53,7 @@
 </div>
 
 @foreach ($entries as $entry)
-  @if (($entry->metadata['activity_status'] ?? $entry->status) === 'pending' && ! in_array($type, ['notes', 'call'], true))
+  @if (($entry->metadata['activity_status'] ?? $entry->status) === 'pending' && auth()->user()->canAccessLeadActivity($lead, 'complete', $type, $entry))
     <div class="offcanvas offcanvas-end" tabindex="-1" id="complete-{{ $entry->id }}">
       <div class="offcanvas-header"><h5 class="offcanvas-title">Complete {{ $label }}</h5><button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button></div>
       <div class="offcanvas-body">
@@ -85,4 +91,3 @@
     </form>
   </div>
 </div>
-

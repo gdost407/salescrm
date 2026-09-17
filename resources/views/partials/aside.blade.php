@@ -75,6 +75,7 @@
       </a>
     </li>
 
+    @if (auth()->user()->hasPermission('view_own_leads'))
     <li class="menu-item {{ request()->routeIs('calendar') ? 'active' : '' }}">
       <a href="{{ route('calendar') }}" class="menu-link">
         <i class="menu-icon tf-icons bx bx-calendar"></i>
@@ -89,7 +90,9 @@
       </a>
     </li>
 
+    @endif
     <!-- sales -->
+    @if (auth()->user()->hasPermission('create_leads') || auth()->user()->hasPermission('view_own_leads') || auth()->user()->hasPermission('edit_all_leads'))
     <li class="menu-item {{ request()->routeIs('sales-*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-layout"></i>
@@ -97,28 +100,35 @@
       </a>
 
       <ul class="menu-sub">
+        @if (auth()->user()->hasPermission('create_leads'))
         <li class="menu-item {{ request()->routeIs('sales-create-lead') ? 'active' : '' }}">
           <a href="{{ route('sales-create-lead') }}" class="menu-link">
             <div data-i18n="Without menu">Create Lead</div>
           </a>
         </li>
+        @endif
+        @if (auth()->user()->hasPermission('view_own_leads'))
         <li class="menu-item {{ request()->routeIs('sales-all-list') ? 'active' : '' }}">
           <a href="{{ route('sales-all-list') }}" class="menu-link">
             <div data-i18n="Without navbar">All List</div>
           </a>
         </li>
+        @endif
+        @if (auth()->user()->hasPermission('edit_all_leads'))
         <li class="menu-item {{ request()->routeIs('sales-lead-settings') ? 'active' : '' }}">
           <a href="{{ route('sales-lead-settings') }}" class="menu-link">
             <div data-i18n="Container">Lead Settings</div>
           </a>
         </li>
+        @endif
       </ul>
     </li>
+    @endif
 
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
     </li> -->
-    @if (auth()->user()->hasPermission('create_staff') || auth()->user()->hasPermission('view_staff') || auth()->user()->hasPermission('manage_roles'))
+    @if (auth()->user()->hasPermission('create_staff') || auth()->user()->hasPermission('view_staff') || auth()->user()->hasPermission('edit_staff'))
     <li class="menu-item {{ request()->routeIs('staff-*', 'staff.*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>
@@ -139,7 +149,7 @@
           </a>
         </li>
         @endif
-        @if (auth()->user()->hasPermission('manage_roles'))
+        @if (auth()->user()->hasPermission('edit_staff'))
         <li class="menu-item {{ request()->routeIs('staff-roles', 'staff.roles.*') ? 'active' : '' }}">
           <a href="{{ route('staff-roles') }}" class="menu-link">
             <div data-i18n="Connections">Roles</div>

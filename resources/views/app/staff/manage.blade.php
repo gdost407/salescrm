@@ -57,12 +57,19 @@
                     <i class="icon-base bx bx-edit-alt"></i> Edit
                   </a>
                   @endif
-                  @if (auth()->user()->hasPermission('resend_staff_password') && auth()->user()->canManageStaffAccount($staff))
+                  @if (auth()->user()->hasPermission('edit_staff') && auth()->user()->canManageStaffAccount($staff))
                   <form action="{{ route('staff.resend-password', $staff) }}" method="POST" class="d-inline" onsubmit="return confirm('Send new password email to {{ $staff->name }} ({{ $staff->email }})?');">
                     @csrf
                     <button type="submit" class="btn btn-sm btn-outline-warning" title="Send Password to Staff User">
                       <i class="icon-base bx bx-key"></i> Send Password
                     </button>
+                  </form>
+                  @endif
+                  @if (auth()->user()->canManageStaffAccount($staff, 'delete'))
+                  <form action="{{ route('staff.destroy', $staff) }}" method="POST" onsubmit="return confirm('Delete this staff account?');">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
                   </form>
                   @endif
                 </div>

@@ -9937,3 +9937,32 @@ Did you mean one of these?
 #70 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/resources/server.php(23): require_once('C://xampp//htdocs...')
 #71 {main}
 "} 
+[2026-09-17 14:27:37] local.ERROR: Undefined array key 1 {"exception":"[object] (ErrorException(code: 0): Undefined array key 1 at C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Console/ServeCommand.php:403)
+[stacktrace]
+#0 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Bootstrap/HandleExceptions.php(262): Illuminate/Foundation/Bootstrap/HandleExceptions->handleError(2, 'Undefined array...', 'C://xampp//htdocs...', 403)
+#1 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Console/ServeCommand.php(403): Illuminate/Foundation/Bootstrap/HandleExceptions->Illuminate/Foundation/Bootstrap/{closure}(2, 'Undefined array...', 'C://xampp//htdocs...', 403)
+#2 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Console/ServeCommand.php(332): Illuminate/Foundation/Console/ServeCommand->getDateFromLine('026] 127.0.0.1:...')
+#3 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Collections/Traits/EnumeratesValues.php(275): Illuminate/Foundation/Console/ServeCommand->Illuminate/Foundation/Console/{closure}('026] 127.0.0.1:...', 0)
+#4 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Console/ServeCommand.php(314): Illuminate/Support/Collection->each(Object(Closure))
+#5 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Console/ServeCommand.php(296): Illuminate/Foundation/Console/ServeCommand->flushOutputBuffer()
+#6 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/process/Process.php(1344): Illuminate/Foundation/Console/ServeCommand->Illuminate/Foundation/Console/{closure}('err', '026] 127.0.0.1:...')
+#7 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/process/Process.php(1444): Symfony/Component/Process/Process->Symfony/Component/Process/{closure}('err', '026] 127.0.0.1:...')
+#8 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/process/Process.php(1364): Symfony/Component/Process/Process->readPipes(false, false)
+#9 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/process/Process.php(899): Symfony/Component/Process/Process->updateStatus(false)
+#10 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Console/ServeCommand.php(140): Symfony/Component/Process/Process->isRunning()
+#11 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(36): Illuminate/Foundation/Console/ServeCommand->handle()
+#12 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Container/Util.php(43): Illuminate/Container/BoundMethod::Illuminate/Container/{closure}()
+#13 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(96): Illuminate/Container/Util::unwrapIfClosure(Object(Closure))
+#14 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Container/BoundMethod.php(35): Illuminate/Container/BoundMethod::callBoundMethod(Object(Illuminate/Foundation/Application), Array, Object(Closure))
+#15 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Container/Container.php(799): Illuminate/Container/BoundMethod::call(Object(Illuminate/Foundation/Application), Array, Array, NULL)
+#16 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Console/Command.php(211): Illuminate/Container/Container->call(Array)
+#17 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/console/Command/Command.php(341): Illuminate/Console/Command->execute(Object(Symfony/Component/Console/Input/ArgvInput), Object(Illuminate/Console/OutputStyle))
+#18 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Console/Command.php(180): Symfony/Component/Console/Command/Command->run(Object(Symfony/Component/Console/Input/ArgvInput), Object(Illuminate/Console/OutputStyle))
+#19 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/console/Application.php(1117): Illuminate/Console/Command->run(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#20 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/console/Application.php(356): Symfony/Component/Console/Application->doRunCommand(Object(Illuminate/Foundation/Console/ServeCommand), Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#21 C:/xampp/htdocs/GDost/salescrm/vendor/symfony/console/Application.php(195): Symfony/Component/Console/Application->doRun(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#22 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Console/Kernel.php(198): Symfony/Component/Console/Application->run(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#23 C:/xampp/htdocs/GDost/salescrm/vendor/laravel/framework/src/Illuminate/Foundation/Application.php(1235): Illuminate/Foundation/Console/Kernel->handle(Object(Symfony/Component/Console/Input/ArgvInput), Object(Symfony/Component/Console/Output/ConsoleOutput))
+#24 C:/xampp/htdocs/GDost/salescrm/artisan(13): Illuminate/Foundation/Application->handleCommand(Object(Symfony/Component/Console/Input/ArgvInput))
+#25 {main}
+"} 

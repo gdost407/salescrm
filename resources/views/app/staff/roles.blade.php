@@ -41,26 +41,20 @@
                             </div>
                             <div class="col-12">
                                 <label class="form-label" for="role_description">Description</label>
-                                <textarea name="description" id="role_description" class="form-control" rows="2" placeholder="Only assigned leads and export access">{{ old('description', $editingRole?->description) }}</textarea>
+                                <textarea name="description" id="role_description" class="form-control" rows="2" placeholder="Describe access within these modules">{{ old('description', $editingRole?->description) }}</textarea>
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Permissions</label>
-                                @foreach ($permissions->groupBy('module')->sortBy(fn ($items, $module) => array_search($module, ['lead', 'staff', 'report', 'admin'], true)) as $module => $modulePermissions)
+                                @foreach ($permissions->groupBy('module') as $module => $modulePermissions)
                                 <fieldset class="border rounded p-3 mb-3">
-                                    <legend class="float-none w-auto px-2 fs-6">{{ match ($module) { 'lead' => 'Lead permissions', 'staff' => 'Staff permissions', 'report' => 'Reports', 'admin' => 'Administration', default => ucfirst($module ?: 'Other') } }}</legend>
+                                    <legend class="float-none w-auto px-2 fs-6">{{ str($module)->replace('_', ' ')->ucfirst() }} permissions</legend>
                                     <div class="row g-3">
                                     @foreach ($modulePermissions as $permission)
                                         <div class="col-md-6">
                                             <div class="form-check">
                                                 <input class="form-check-input" type="checkbox" name="permissions[]" value="{{ $permission->slug }}" id="perm-{{ $permission->id }}" @checked(in_array($permission->slug, old('permissions_submitted') ? old('permissions', []) : ($editingRole?->permissions->pluck('slug')->all() ?? []), true))>
-                                                <label class="form-check-label" for="perm-{{ $permission->id }}">{{ $permission->name }}</label>
-                                                @if ($permission->slug === 'manage_team')
-                                                    <small class="text-muted d-block">Includes view, create, edit, and password actions. Role management is separate.</small>
-                                                @elseif ($permission->slug === 'manage_roles')
-                                                    <small class="text-muted d-block">Create roles, change permissions, and assign access roles to staff.</small>
-                                                @elseif ($permission->slug === 'admin_access')
-                                                    <small class="text-muted d-block">Grants every permission, including staff and role management.</small>
-                                                @endif
+                                                <label class="form-check-label" for="perm-{{ $permission->id }}">{{ \App\Models\Permission::MODULES[$module][$permission->slug] }}</label>
+
                                             </div>
                                         </div>
                                     @endforeach
@@ -89,12 +83,12 @@
                                             <small class="text-muted">{{ $role->description }}</small>
                                         @endif
                                     </div>
-                                    <span class="badge {{ $role->permissions->contains('slug', 'admin_access') ? 'bg-danger' : 'bg-primary' }} rounded-pill">{{ $role->permissions->contains('slug', 'admin_access') ? 'Full access' : 'Custom access' }}</span>
+                                    <span class="badge bg-primary rounded-pill">Module access</span>
                                 </div>
                                 @if ($role->permissions->isNotEmpty())
                                     <div class="mt-2 d-flex flex-wrap gap-1">
                                         @foreach ($role->permissions as $permission)
-                                            <span class="badge bg-light text-dark">{{ $permission->name }}</span>
+                                            <span class="badge bg-light text-dark">{{ ucfirst($permission->module) }}: {{ \App\Models\Permission::MODULES[$permission->module][$permission->slug] }}</span>
                                         @endforeach
                                     </div>
                                 @endif
@@ -113,38 +107,11 @@
                     <h5 class="card-title mb-0">Permission Reference</h5>
                 </div>
                 <div class="card-body">
-                    <div class="row g-3">
-                        <div class="col-12">
-                            <h6>Leads</h6>
-                            <ul class="list-unstyled small mb-0">
-                                <li><strong>View Leads:</strong> Access to view leads</li>
-                                <li><strong>Create Leads:</strong> Add new leads</li>
-                                <li><strong>Edit Own Leads:</strong> Edit only assigned leads</li>
-                                <li><strong>Edit All Leads:</strong> Edit any lead</li>
-                                <li><strong>Delete Leads:</strong> Remove leads</li>
-                                <li><strong>Export Leads:</strong> Download CSV / export</li>
-                                <li><strong>Print Leads:</strong> Print lead list or details</li>
-                            </ul>
-                        </div>
-                        <div class="col-12">
-                            <h6>Staff</h6>
-                            <ul class="list-unstyled small mb-0">
-                                <li><strong>View Staff:</strong> Open the staff list</li>
-                                <li><strong>Create Staff:</strong> Add staff accounts</li>
-                                <li><strong>Edit Staff:</strong> Update staff details and active status</li>
-                                <li><strong>Resend Staff Password:</strong> Generate and email a new password</li>
-                                <li><strong>Manage Team:</strong> Includes view, create, edit, and password actions</li>
-                                <li><strong>Manage Roles &amp; Permissions:</strong> Configure and assign access roles; also required to manage administrator accounts</li>
-                            </ul>
-                        </div>
-                        <div class="col-12">
-                            <h6>Reports &amp; Administration</h6>
-                            <ul class="list-unstyled small mb-0">
-                                <li><strong>View Reports:</strong> Access dashboard reporting</li>
-                                <li><strong>Admin Access:</strong> Grants all lead, staff, and role permissions</li>
-                            </ul>
-                        </div>
-                    </div>
+                    <p>Lead permissions retain create and self/all view, update, and delete access. Staff has only Create, View, Edit, and Delete within your company.</p>
+                    <p>Lead Activity permissions control adding, updating, and deleting activities, scheduling and managing follow-ups, and working/completing them. Follow-up permissions also cover scheduled visits and meetings.</p>
+                    <p>Self/assigned means activities on assigned leads or activities you created. All means company records only. Lead view access is required.</p>
+                    <p>Calendar, Kanban, lists, export, and print follow Lead view permissions. Lead settings require Lead Edit all.</p>
+                    <p>Staff Edit controls role configuration and assignment. Staff can assign only permissions they already hold and cannot change their own access role.</p>
                 </div>
             </div>
         </div>

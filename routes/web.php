@@ -8,8 +8,8 @@ use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
 use App\Http\Middleware\EnsureCompanyOnboardingComplete;
-use App\Http\Middleware\EnsurePermission;
 use App\Http\Middleware\EnsureLeadAccess;
+use App\Http\Middleware\EnsurePermission;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -77,7 +77,7 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
         Route::put('{staffUser}', [StaffController::class, 'update'])->middleware(EnsurePermission::class.':edit_staff')->name('staff.update');
         Route::post('{staffUser}/resend-password', [StaffController::class, 'resendPassword'])->middleware(EnsurePermission::class.':edit_staff')->name('staff.resend-password');
         Route::delete('{staffUser}', [StaffController::class, 'destroy'])->middleware(EnsurePermission::class.':delete_staff')->name('staff.destroy');
-        Route::middleware(EnsurePermission::class.':manage_roles')->group(function () {
+        Route::middleware(EnsurePermission::class.':edit_staff')->group(function () {
             Route::get('roles', [StaffController::class, 'roles'])->name('staff-roles');
             Route::post('roles', [StaffController::class, 'storeRole'])->name('staff.roles.store');
             Route::get('roles/{role}/edit', [StaffController::class, 'editRole'])->name('staff.roles.edit');
