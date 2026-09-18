@@ -125,6 +125,21 @@
     </li>
     @endif
 
+    @if (auth()->user()->hasPermission('view_catalog_items') || auth()->user()->hasPermission('create_catalog_items'))
+    <li class="menu-item {{ request()->routeIs('catalog-items.*') ? 'active' : '' }}">
+      <a href="{{ route(auth()->user()->hasPermission('view_catalog_items') ? 'catalog-items.index' : 'catalog-items.create') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-package"></i><div>Services / Inventory</div>
+      </a>
+    </li>
+    @endif
+    @if (auth()->user()->hasPermission('view_quotations') || auth()->user()->hasPermission('create_quotations'))
+    <li class="menu-item {{ request()->routeIs('quotations.*') ? 'active' : '' }}">
+      <a href="{{ route(auth()->user()->hasPermission('view_quotations') ? 'quotations.index' : 'quotations.create') }}" class="menu-link">
+        <i class="menu-icon tf-icons bx bx-file"></i><div>Quotations</div>
+      </a>
+    </li>
+    @endif
+
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
     </li> -->

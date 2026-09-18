@@ -12,6 +12,17 @@ class Permission extends Model
     use HasFactory;
 
     public const MODULES = [
+        'catalog' => [
+            'create_catalog_items' => 'Create',
+            'view_catalog_items' => 'View',
+            'edit_catalog_items' => 'Edit',
+            'delete_catalog_items' => 'Delete',
+        ],
+        'quotation' => [
+            'create_quotations' => 'Create',
+            'view_quotations' => 'View',
+            'edit_quotations' => 'Edit',
+        ],
         'lead' => [
             'create_leads' => 'Create',
             'view_own_leads' => 'View self',

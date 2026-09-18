@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\Webhook\LeadWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Web\CalendarController;
 use App\Http\Controllers\Web\Integration\ApiTokenController;
+use App\Http\Controllers\Web\Sales\CatalogItemController;
+use App\Http\Controllers\Web\Sales\QuotationController;
 use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
@@ -67,6 +69,15 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
         Route::delete('lead-settings/{leadSetting}', [SalesController::class, 'destroyLeadSetting'])->name('sales-lead-settings.destroy');
         Route::get('lead-view/{lead}', [SalesController::class, 'leadView'])->name('sales-lead-view');
     });
+
+    Route::get('catalog-items/{catalog_item}/image', [CatalogItemController::class, 'image'])->name('catalog-items.image');
+    Route::resource('catalog-items', CatalogItemController::class)->only(['create', 'store'])->middleware(EnsurePermission::class.':create_catalog_items');
+    Route::resource('catalog-items', CatalogItemController::class)->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_catalog_items');
+    Route::resource('catalog-items', CatalogItemController::class)->only(['index', 'show'])->middleware(EnsurePermission::class.':view_catalog_items');
+    Route::resource('catalog-items', CatalogItemController::class)->only(['destroy'])->middleware(EnsurePermission::class.':delete_catalog_items');
+    Route::resource('quotations', QuotationController::class)->only(['create', 'store'])->middleware(EnsurePermission::class.':create_quotations');
+    Route::resource('quotations', QuotationController::class)->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_quotations');
+    Route::resource('quotations', QuotationController::class)->only(['index', 'show'])->middleware(EnsurePermission::class.':view_quotations');
 
     // Staff Routes
     Route::prefix('staff')->group(function () {

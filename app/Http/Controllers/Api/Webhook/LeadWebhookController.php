@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Webhook;
 
+use App\Actions\SaveLead;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Integration;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 
 class LeadWebhookController extends Controller
 {
+    public function __construct(private SaveLead $saveLead) {}
+
     public function store(Request $request): JsonResponse
     {
         $startTime = now();
@@ -148,7 +151,7 @@ class LeadWebhookController extends Controller
         //     ->value('name') ?? 'New';
         $defaultStage = 'New';
 
-        $lead = Lead::create([
+        $lead = $this->saveLead->handle([
             'company_id' => $company->id,
             'name' => $validated['name'],
             'email' => $validated['email'] ?? null,
