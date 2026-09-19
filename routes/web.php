@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\Webhook\LeadWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Web\CalendarController;
 use App\Http\Controllers\Web\Client\ClientController;
+use App\Http\Controllers\Web\DashboardController;
 use App\Http\Controllers\Web\Integration\ApiTokenController;
 use App\Http\Controllers\Web\Invoice\InvoiceController;
 use App\Http\Controllers\Web\Item\ItemController;
@@ -32,7 +33,7 @@ Route::get('/', function () {
     return view('welcome');
 })->name('home');
 
-Route::view('dashboard', 'dashboard')
+Route::get('dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])
     ->name('dashboard');
 
