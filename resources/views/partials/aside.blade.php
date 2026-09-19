@@ -125,20 +125,24 @@
     </li>
     @endif
 
-    @if (auth()->user()->hasPermission('view_catalog_items') || auth()->user()->hasPermission('create_catalog_items'))
-    <li class="menu-item {{ request()->routeIs('catalog-items.*') ? 'active' : '' }}">
-      <a href="{{ route(auth()->user()->hasPermission('view_catalog_items') ? 'catalog-items.index' : 'catalog-items.create') }}" class="menu-link">
-        <i class="menu-icon tf-icons bx bx-package"></i><div>Services / Inventory</div>
+    @foreach ([
+        ['clients', 'clients', 'Clients', 'bx-user'],
+        ['taxes', 'taxes', 'Taxes', 'bx-calculator'],
+        ['items', 'catalog_items', 'Services / Inventory', 'bx-package'],
+        ['quotations', 'quotations', 'Quotations', 'bx-file'],
+        ['jobs', 'jobs', 'Jobs', 'bx-briefcase'],
+        ['invoices', 'invoices', 'Invoices', 'bx-receipt'],
+        ['payments', 'payments', 'Payments', 'bx-wallet'],
+        ['ledger', 'ledger', 'Ledger', 'bx-book'],
+    ] as [$salesResource, $salesPermission, $salesLabel, $salesIcon])
+    @if (auth()->user()->hasPermission('view_'.$salesPermission) || auth()->user()->hasPermission('create_'.$salesPermission))
+    <li class="menu-item {{ request()->routeIs($salesResource.'.*') ? 'active' : '' }}">
+      <a href="{{ route($salesResource.(auth()->user()->hasPermission('view_'.$salesPermission) ? '.index' : '.create')) }}" class="menu-link">
+        <i class="menu-icon tf-icons bx {{ $salesIcon }}"></i><div>{{ $salesLabel }}</div>
       </a>
     </li>
     @endif
-    @if (auth()->user()->hasPermission('view_quotations') || auth()->user()->hasPermission('create_quotations'))
-    <li class="menu-item {{ request()->routeIs('quotations.*') ? 'active' : '' }}">
-      <a href="{{ route(auth()->user()->hasPermission('view_quotations') ? 'quotations.index' : 'quotations.create') }}" class="menu-link">
-        <i class="menu-icon tf-icons bx bx-file"></i><div>Quotations</div>
-      </a>
-    </li>
-    @endif
+    @endforeach
 
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>

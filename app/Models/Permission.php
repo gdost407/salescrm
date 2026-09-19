@@ -12,6 +12,42 @@ class Permission extends Model
     use HasFactory;
 
     public const MODULES = [
+        'clients' => [
+            'create_clients' => 'Create',
+            'view_clients' => 'View',
+            'edit_clients' => 'Edit',
+            'delete_clients' => 'Delete',
+        ],
+        'taxes' => [
+            'create_taxes' => 'Create',
+            'view_taxes' => 'View',
+            'edit_taxes' => 'Edit',
+            'delete_taxes' => 'Delete',
+        ],
+        'jobs' => [
+            'create_jobs' => 'Create',
+            'view_jobs' => 'View',
+            'edit_jobs' => 'Edit',
+            'delete_jobs' => 'Delete',
+        ],
+        'invoices' => [
+            'create_invoices' => 'Create',
+            'view_invoices' => 'View',
+            'edit_invoices' => 'Edit',
+            'delete_invoices' => 'Delete',
+        ],
+        'payments' => [
+            'create_payments' => 'Create',
+            'view_payments' => 'View',
+            'edit_payments' => 'Edit',
+            'delete_payments' => 'Delete',
+        ],
+        'ledger' => [
+            'create_ledger' => 'Create',
+            'view_ledger' => 'View',
+            'edit_ledger' => 'Edit',
+            'delete_ledger' => 'Delete',
+        ],
         'catalog' => [
             'create_catalog_items' => 'Create',
             'view_catalog_items' => 'View',
@@ -22,6 +58,7 @@ class Permission extends Model
             'create_quotations' => 'Create',
             'view_quotations' => 'View',
             'edit_quotations' => 'Edit',
+            'delete_quotations' => 'Delete',
         ],
         'lead' => [
             'create_leads' => 'Create',

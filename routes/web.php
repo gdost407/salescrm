@@ -3,11 +3,17 @@
 use App\Http\Controllers\Api\Webhook\LeadWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Web\CalendarController;
+use App\Http\Controllers\Web\Client\ClientController;
 use App\Http\Controllers\Web\Integration\ApiTokenController;
-use App\Http\Controllers\Web\Sales\CatalogItemController;
-use App\Http\Controllers\Web\Sales\QuotationController;
+use App\Http\Controllers\Web\Invoice\InvoiceController;
+use App\Http\Controllers\Web\Item\ItemController;
+use App\Http\Controllers\Web\Job\JobController;
+use App\Http\Controllers\Web\Ledger\LedgerController;
+use App\Http\Controllers\Web\Payment\PaymentController;
+use App\Http\Controllers\Web\Quotation\QuotationController;
 use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
+use App\Http\Controllers\Web\Tax\TaxController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
 use App\Http\Middleware\EnsureCompanyOnboardingComplete;
 use App\Http\Middleware\EnsureLeadAccess;
@@ -70,14 +76,68 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
         Route::get('lead-view/{lead}', [SalesController::class, 'leadView'])->name('sales-lead-view');
     });
 
-    Route::get('catalog-items/{catalog_item}/image', [CatalogItemController::class, 'image'])->name('catalog-items.image');
-    Route::resource('catalog-items', CatalogItemController::class)->only(['create', 'store'])->middleware(EnsurePermission::class.':create_catalog_items');
-    Route::resource('catalog-items', CatalogItemController::class)->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_catalog_items');
-    Route::resource('catalog-items', CatalogItemController::class)->only(['index', 'show'])->middleware(EnsurePermission::class.':view_catalog_items');
-    Route::resource('catalog-items', CatalogItemController::class)->only(['destroy'])->middleware(EnsurePermission::class.':delete_catalog_items');
-    Route::resource('quotations', QuotationController::class)->only(['create', 'store'])->middleware(EnsurePermission::class.':create_quotations');
-    Route::resource('quotations', QuotationController::class)->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_quotations');
-    Route::resource('quotations', QuotationController::class)->only(['index', 'show'])->middleware(EnsurePermission::class.':view_quotations');
+    Route::resource('clients', ClientController::class)->parameters(['clients' => 'client'])->only(['create', 'store'])->middleware(EnsurePermission::class.':create_clients');
+    Route::resource('clients', ClientController::class)->parameters(['clients' => 'client'])->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_clients');
+    Route::resource('clients', ClientController::class)->parameters(['clients' => 'client'])->only(['index', 'show'])->middleware(EnsurePermission::class.':view_clients');
+    Route::resource('clients', ClientController::class)->parameters(['clients' => 'client'])->only(['destroy'])->middleware(EnsurePermission::class.':delete_clients');
+
+    Route::resource('taxes', TaxController::class)->parameters(['taxes' => 'tax'])->only(['create', 'store'])->middleware(EnsurePermission::class.':create_taxes');
+    Route::resource('taxes', TaxController::class)->parameters(['taxes' => 'tax'])->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_taxes');
+    Route::resource('taxes', TaxController::class)->parameters(['taxes' => 'tax'])->only(['index', 'show'])->middleware(EnsurePermission::class.':view_taxes');
+    Route::resource('taxes', TaxController::class)->parameters(['taxes' => 'tax'])->only(['destroy'])->middleware(EnsurePermission::class.':delete_taxes');
+
+    Route::get('items/{item}/image', [ItemController::class, 'image'])->name('items.image');
+    Route::resource('items', ItemController::class)->parameters(['items' => 'item'])->only(['create', 'store'])->middleware(EnsurePermission::class.':create_catalog_items');
+    Route::resource('items', ItemController::class)->parameters(['items' => 'item'])->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_catalog_items');
+    Route::resource('items', ItemController::class)->parameters(['items' => 'item'])->only(['index', 'show'])->middleware(EnsurePermission::class.':view_catalog_items');
+    Route::resource('items', ItemController::class)->parameters(['items' => 'item'])->only(['destroy'])->middleware(EnsurePermission::class.':delete_catalog_items');
+
+    Route::get('catalog-items/{item}/image', [ItemController::class, 'image'])->name('catalog-items.image');
+    Route::resource('catalog-items', ItemController::class)->parameters(['catalog-items' => 'item'])->only(['create', 'store'])->middleware(EnsurePermission::class.':create_catalog_items');
+    Route::resource('catalog-items', ItemController::class)->parameters(['catalog-items' => 'item'])->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_catalog_items');
+    Route::resource('catalog-items', ItemController::class)->parameters(['catalog-items' => 'item'])->only(['index', 'show'])->middleware(EnsurePermission::class.':view_catalog_items');
+    Route::resource('catalog-items', ItemController::class)->parameters(['catalog-items' => 'item'])->only(['destroy'])->middleware(EnsurePermission::class.':delete_catalog_items');
+
+    Route::get('quotations/{document}/print', [QuotationController::class, 'print'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':view_quotations')->name('quotations.print');
+    Route::get('quotations/{document}/attachments/{attachment}', [QuotationController::class, 'attachment'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':view_quotations')->name('quotations.attachment');
+    Route::get('quotations', [QuotationController::class, 'index'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':view_quotations')->name('quotations.index');
+    Route::get('quotations/create', [QuotationController::class, 'create'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':create_quotations')->name('quotations.create');
+    Route::post('quotations', [QuotationController::class, 'store'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':create_quotations')->name('quotations.store');
+    Route::get('quotations/{document}/edit', [QuotationController::class, 'edit'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':edit_quotations')->name('quotations.edit');
+    Route::match(['put', 'patch'], 'quotations/{document}', [QuotationController::class, 'update'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':edit_quotations')->name('quotations.update');
+    Route::get('quotations/{document}', [QuotationController::class, 'show'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':view_quotations')->name('quotations.show');
+    Route::delete('quotations/{document}', [QuotationController::class, 'destroy'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':delete_quotations')->name('quotations.destroy');
+
+    Route::get('jobs/{document}/print', [JobController::class, 'print'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':view_jobs')->name('jobs.print');
+    Route::get('jobs/{document}/attachments/{attachment}', [JobController::class, 'attachment'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':view_jobs')->name('jobs.attachment');
+    Route::get('jobs', [JobController::class, 'index'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':view_jobs')->name('jobs.index');
+    Route::get('jobs/create', [JobController::class, 'create'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':create_jobs')->name('jobs.create');
+    Route::post('jobs', [JobController::class, 'store'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':create_jobs')->name('jobs.store');
+    Route::get('jobs/{document}/edit', [JobController::class, 'edit'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':edit_jobs')->name('jobs.edit');
+    Route::match(['put', 'patch'], 'jobs/{document}', [JobController::class, 'update'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':edit_jobs')->name('jobs.update');
+    Route::get('jobs/{document}', [JobController::class, 'show'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':view_jobs')->name('jobs.show');
+    Route::delete('jobs/{document}', [JobController::class, 'destroy'])->defaults('document_type', 'job')->middleware(EnsurePermission::class.':delete_jobs')->name('jobs.destroy');
+
+    Route::get('invoices/{document}/print', [InvoiceController::class, 'print'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':view_invoices')->name('invoices.print');
+    Route::get('invoices/{document}/attachments/{attachment}', [InvoiceController::class, 'attachment'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':view_invoices')->name('invoices.attachment');
+    Route::get('invoices', [InvoiceController::class, 'index'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':view_invoices')->name('invoices.index');
+    Route::get('invoices/create', [InvoiceController::class, 'create'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':create_invoices')->name('invoices.create');
+    Route::post('invoices', [InvoiceController::class, 'store'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':create_invoices')->name('invoices.store');
+    Route::get('invoices/{document}/edit', [InvoiceController::class, 'edit'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':edit_invoices')->name('invoices.edit');
+    Route::match(['put', 'patch'], 'invoices/{document}', [InvoiceController::class, 'update'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':edit_invoices')->name('invoices.update');
+    Route::get('invoices/{document}', [InvoiceController::class, 'show'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':view_invoices')->name('invoices.show');
+    Route::delete('invoices/{document}', [InvoiceController::class, 'destroy'])->defaults('document_type', 'invoice')->middleware(EnsurePermission::class.':delete_invoices')->name('invoices.destroy');
+
+    Route::get('payments/{payment}/print', [PaymentController::class, 'print'])->middleware(EnsurePermission::class.':view_payments')->name('payments.print');
+    Route::resource('payments', PaymentController::class)->parameters(['payments' => 'payment'])->only(['create', 'store'])->middleware(EnsurePermission::class.':create_payments');
+    Route::resource('payments', PaymentController::class)->parameters(['payments' => 'payment'])->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_payments');
+    Route::resource('payments', PaymentController::class)->parameters(['payments' => 'payment'])->only(['index', 'show'])->middleware(EnsurePermission::class.':view_payments');
+    Route::resource('payments', PaymentController::class)->parameters(['payments' => 'payment'])->only(['destroy'])->middleware(EnsurePermission::class.':delete_payments');
+
+    Route::resource('ledger', LedgerController::class)->parameters(['ledger' => 'ledger'])->only(['create', 'store'])->middleware(EnsurePermission::class.':create_ledger');
+    Route::resource('ledger', LedgerController::class)->parameters(['ledger' => 'ledger'])->only(['edit', 'update'])->middleware(EnsurePermission::class.':edit_ledger');
+    Route::resource('ledger', LedgerController::class)->parameters(['ledger' => 'ledger'])->only(['index', 'show'])->middleware(EnsurePermission::class.':view_ledger');
+    Route::resource('ledger', LedgerController::class)->parameters(['ledger' => 'ledger'])->only(['destroy'])->middleware(EnsurePermission::class.':delete_ledger');
 
     // Staff Routes
     Route::prefix('staff')->group(function () {
