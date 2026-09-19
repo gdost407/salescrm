@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Item;
 use App\Models\TxnHistoryItem;
+use App\Models\TxnQuotation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,9 +21,9 @@ class TxnHistoryItemFactory extends Factory
     {
         return [
             'document_type' => 'quotation',
-            'document_id' => \App\Models\TxnQuotation::factory(),
-            'company_id' => fn (array $attributes) => \App\Models\TxnQuotation::findOrFail($attributes['document_id'])->company_id,
-            'item_id' => fn (array $attributes) => \App\Models\Item::factory()->create(['company_id' => $attributes['company_id']])->id,
+            'document_id' => TxnQuotation::factory(),
+            'company_id' => fn (array $attributes) => TxnQuotation::findOrFail($attributes['document_id'])->company_id,
+            'item_id' => fn (array $attributes) => Item::factory()->create(['company_id' => $attributes['company_id']])->id,
             'item_type' => 'service',
             'item_name' => fake()->words(3, true),
             'qty' => '1.000',

@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\TxnLedger;
+use App\Models\TxnQuotation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,9 +20,9 @@ class TxnLedgerFactory extends Factory
     {
         return [
             'document_type' => 'quotation',
-            'document_id' => \App\Models\TxnQuotation::factory(),
-            'company_id' => fn (array $attributes) => \App\Models\TxnQuotation::findOrFail($attributes['document_id'])->company_id,
-            'client_id' => fn (array $attributes) => \App\Models\TxnQuotation::findOrFail($attributes['document_id'])->client_id,
+            'document_id' => TxnQuotation::factory(),
+            'company_id' => fn (array $attributes) => TxnQuotation::findOrFail($attributes['document_id'])->company_id,
+            'client_id' => fn (array $attributes) => TxnQuotation::findOrFail($attributes['document_id'])->client_id,
             'ledger_type' => 'client',
             'transaction_date' => today(),
             'entry_type' => 'debit',

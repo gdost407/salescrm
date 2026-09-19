@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\TxnHistoryItemFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class TxnHistoryItem extends Model
 {
-    /** @use HasFactory<\Database\Factories\TxnHistoryItemFactory> */
+    /** @use HasFactory<TxnHistoryItemFactory> */
     use HasFactory;
 
     protected $fillable = [

@@ -11,4 +11,5 @@ test('quotation line calculations use exact decimal rounding', function (string 
     'fractional quantity' => ['service', '99.99', '1.125', '18', ['subtotal' => '112.49', 'tax_total' => '20.25', 'total' => '132.74']],
     'inclusive rounding' => ['inventory', '100', '1', '18', ['subtotal' => '84.75', 'tax_total' => '15.25', 'total' => '100.00']],
     'half cent' => ['service', '0.05', '1', '10', ['subtotal' => '0.05', 'tax_total' => '0.01', 'total' => '0.06']],
+    'four decimal tax rate' => ['service', '10000', '1', '18.1234', ['subtotal' => '10000.00', 'tax_total' => '1812.34', 'total' => '11812.34']],
 ]);

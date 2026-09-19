@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Client;
 use App\Models\TxnQuotation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,8 +19,8 @@ class TxnQuotationFactory extends Factory
     public function definition(): array
     {
         return [
-            'client_id' => \App\Models\Client::factory(),
-            'company_id' => fn (array $attributes) => \App\Models\Client::findOrFail($attributes['client_id'])->company_id,
+            'client_id' => Client::factory(),
+            'company_id' => fn (array $attributes) => Client::findOrFail($attributes['client_id'])->company_id,
             'quotation_no' => fake()->unique()->bothify('TXN-########'),
             'quotation_date' => today(),
             'subtotal' => '0.00',

@@ -27,11 +27,9 @@ test('kanban conversion copies client data and preserves history and assignee', 
     $lead->refresh();
     expect($lead->client)->not->toBeNull()
         ->and($lead->client->company_id)->toBe($this->company->id)
-        ->and($lead->client->lead_id)->toBe($lead->id)
-        ->and($lead->client->phone)->toBe($lead->mobile)
-        ->and($lead->client->alternate_phone)->toBe('9876543210')
-        ->and($lead->client->designation)->toBe('Manager')
-        ->and($lead->client->address)->toBe('12 Main Road')
+        ->and($lead->client->leads->modelKeys())->toBe([$lead->id])
+        ->and($lead->client->mobile)->toBe($lead->mobile)
+        ->and($lead->client->billing_address)->toBe('12 Main Road')
         ->and($lead->converted_at)->not->toBeNull()
         ->and($lead->assigned_to)->toBe($this->owner->id)
         ->and($lead->activities()->where('subject', 'Status changed')->count())->toBe(1);

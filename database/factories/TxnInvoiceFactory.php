@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Client;
 use App\Models\TxnInvoice;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,8 +19,8 @@ class TxnInvoiceFactory extends Factory
     public function definition(): array
     {
         return [
-            'client_id' => \App\Models\Client::factory(),
-            'company_id' => fn (array $attributes) => \App\Models\Client::findOrFail($attributes['client_id'])->company_id,
+            'client_id' => Client::factory(),
+            'company_id' => fn (array $attributes) => Client::findOrFail($attributes['client_id'])->company_id,
             'invoice_no' => fake()->unique()->bothify('TXN-########'),
             'invoice_date' => today(),
             'subtotal' => '0.00',

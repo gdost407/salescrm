@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\TxnLedgerFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 
 class TxnLedger extends Model
 {
-    /** @use HasFactory<\Database\Factories\TxnLedgerFactory> */
+    /** @use HasFactory<TxnLedgerFactory> */
     use HasFactory;
 
     protected $table = 'txn_ledger';

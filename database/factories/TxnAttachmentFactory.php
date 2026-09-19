@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\TxnAttachment;
+use App\Models\TxnQuotation;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -19,8 +20,8 @@ class TxnAttachmentFactory extends Factory
     {
         return [
             'document_type' => 'quotation',
-            'document_id' => \App\Models\TxnQuotation::factory(),
-            'company_id' => fn (array $attributes) => \App\Models\TxnQuotation::findOrFail($attributes['document_id'])->company_id,
+            'document_id' => TxnQuotation::factory(),
+            'company_id' => fn (array $attributes) => TxnQuotation::findOrFail($attributes['document_id'])->company_id,
             'file_name' => 'attachment.pdf',
             'file_path' => 'attachments/attachment.pdf',
             'mime_type' => 'application/pdf',

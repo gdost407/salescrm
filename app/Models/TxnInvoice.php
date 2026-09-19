@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
+use Database\Factories\TxnInvoiceFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class TxnInvoice extends Model
 {
-    /** @use HasFactory<\Database\Factories\TxnInvoiceFactory> */
+    /** @use HasFactory<TxnInvoiceFactory> */
     use HasFactory;
 
     protected $fillable = [

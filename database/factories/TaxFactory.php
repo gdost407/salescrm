@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Models\Company;
 use App\Models\Tax;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -18,7 +19,7 @@ class TaxFactory extends Factory
     public function definition(): array
     {
         return [
-            'company_id' => \App\Models\Company::factory(),
+            'company_id' => Company::factory(),
             'name' => 'GST',
             'rate' => '18.0000',
             'is_active' => true,

@@ -2,16 +2,17 @@
 
 namespace App\Models;
 
+use Database\Factories\TxnJobFactory;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class TxnJob extends Model
 {
-    /** @use HasFactory<\Database\Factories\TxnJobFactory> */
+    /** @use HasFactory<TxnJobFactory> */
     use HasFactory;
 
     protected $fillable = [

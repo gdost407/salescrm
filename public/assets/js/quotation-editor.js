@@ -15,9 +15,9 @@ export function money(cents) {
 
 export function calculateLine(type, rate, quantity, gstRate) {
     const amount = roundDivide(scaled(rate, 2) * scaled(quantity, 3), 1000n);
-    const gst = scaled(gstRate, 2);
-    const subtotal = type === 'inventory' ? roundDivide(amount * 10000n, 10000n + gst) : amount;
-    const tax = type === 'inventory' ? amount - subtotal : roundDivide(subtotal * gst, 10000n);
+    const gst = scaled(gstRate, 4);
+    const subtotal = type === 'inventory' ? roundDivide(amount * 1000000n, 1000000n + gst) : amount;
+    const tax = type === 'inventory' ? amount - subtotal : roundDivide(subtotal * gst, 1000000n);
     return { subtotal, tax, total: subtotal + tax };
 }
 
@@ -38,14 +38,14 @@ export function initQuotationEditor({ catalog, snapshots, rows }) {
             quantity.name = `items[${index}][quantity]`;
             snapshotInput.name = `items[${index}][quotation_item_id]`;
             const snapshot = snapshotsById.get(snapshotInput.value);
-            const item = snapshot && String(snapshot.catalog_item_id) === select.value ? snapshot : catalogById.get(select.value);
+            const item = snapshot && String(snapshot.catalog_item_id ?? '') === select.value ? snapshot : catalogById.get(select.value);
             row.querySelector('.item-hsn').textContent = item?.hsn ?? '';
             row.querySelector('.item-rate').textContent = item?.rate ?? '';
             row.querySelector('.item-gst').textContent = item?.gst_rate ?? '';
-            row.querySelector('.rate-basis').textContent = item ? (item.type === 'service' ? 'GST exclusive' : 'GST inclusive') : '';
+            row.querySelector('.rate-basis').textContent = item ? (item.tax_type === 'inclusive' ? 'GST inclusive' : 'GST exclusive') : '';
             let amounts = { subtotal: 0n, tax: 0n, total: 0n };
             if (item && quantity.validity.valid && quantity.value !== '') {
-                try { amounts = calculateLine(item.type, item.rate, quantity.value, item.gst_rate); } catch { /* Incomplete input has no preview. */ }
+                try { amounts = calculateLine(item.tax_type === 'inclusive' ? 'inventory' : 'service', item.rate, quantity.value, item.gst_rate); } catch { /* Incomplete input has no preview. */ }
             }
             row.querySelector('.item-subtotal').textContent = money(amounts.subtotal);
             row.querySelector('.item-tax').textContent = money(amounts.tax);
@@ -71,16 +71,21 @@ export function initQuotationEditor({ catalog, snapshots, rows }) {
             select.append(group);
         }
         const snapshot = snapshotsById.get(String(initial.quotation_item_id ?? ''));
-        if (snapshot && String(snapshot.catalog_item_id) === String(initial.catalog_item_id)) {
+        if (snapshot && String(snapshot.catalog_item_id ?? '') === String(initial.catalog_item_id ?? '')) {
             row.querySelector('.snapshot-id').value = snapshot.id;
+            if (snapshot.catalog_item_id === null) {
+                select.options[0].textContent = `${snapshot.name} — saved quotation item`;
+                select.required = false;
+            }
             const existingOption = [...select.options].find(option => option.value === String(snapshot.catalog_item_id));
             if (existingOption) existingOption.textContent = `${snapshot.name} — quoted INR ${snapshot.rate}`;
-            else select.add(new Option(`${snapshot.name} — saved quotation item`, String(snapshot.catalog_item_id)));
+            else if (snapshot.catalog_item_id !== null) select.add(new Option(`${snapshot.name} — saved quotation item`, String(snapshot.catalog_item_id)));
         }
         select.value = String(initial.catalog_item_id ?? '');
         row.querySelector('.item-quantity').value = initial.quantity ?? '1';
         select.addEventListener('change', () => {
             row.querySelector('.snapshot-id').value = '';
+            select.required = true;
             if (snapshot) {
                 const option = [...select.options].find(option => option.value === String(snapshot.catalog_item_id));
                 const current = catalogById.get(String(snapshot.catalog_item_id));

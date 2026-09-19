@@ -1,13 +1,13 @@
 <?php
 
 use App\Actions\SaveQuotation;
-use App\Models\Item;
 use App\Models\Client;
 use App\Models\Company;
+use App\Models\Item;
 use App\Models\Permission;
-use App\Models\TxnQuotation;
-use App\Models\TxnHistoryItem;
 use App\Models\Role;
+use App\Models\TxnHistoryItem;
+use App\Models\TxnQuotation;
 use App\Models\User;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
@@ -36,24 +36,24 @@ test('catalogue supports CRUD and private image replacement', function () {
     $this->post(route('catalog-items.store'), $data)->assertSessionHasNoErrors()->assertRedirect();
     $item = Item::where('name', 'Consulting')->firstOrFail();
     expect($item->company_id)->toBe($this->company->id);
-    Storage::disk('local')->assertExists($item->image_path);
+    Storage::disk('local')->assertExists($item->image);
     $this->get(route('catalog-items.image', $item))->assertSuccessful()->assertHeader('x-content-type-options', 'nosniff');
     $this->get(route('catalog-items.index'))->assertSuccessful()->assertSee('Consulting');
     $this->get(route('catalog-items.show', $item))->assertSuccessful()->assertSee('GST exclusive');
     $this->get(route('catalog-items.edit', $item))->assertSuccessful();
-    $oldPath = $item->image_path;
+    $oldPath = $item->image;
     $data['image'] = UploadedFile::fake()->image('new.png');
     $data['type'] = 'inventory';
     $this->put(route('catalog-items.update', $item), $data)->assertSessionHasNoErrors()->assertRedirect();
     Storage::disk('local')->assertMissing($oldPath);
-    Storage::disk('local')->assertExists($item->fresh()->image_path);
-    $newPath = $item->fresh()->image_path;
+    Storage::disk('local')->assertExists($item->fresh()->image);
+    $newPath = $item->fresh()->image;
     unset($data['image']);
     $this->put(route('catalog-items.update', $item), $data + ['remove_image' => 1])->assertSessionHasNoErrors();
     Storage::disk('local')->assertMissing($newPath);
-    expect($item->fresh()->image_path)->toBeNull();
+    expect($item->fresh()->image)->toBeNull();
     $this->delete(route('catalog-items.destroy', $item))->assertRedirect();
-    $this->assertSoftDeleted($item);
+    $this->assertModelMissing($item);
 });
 
 test('catalogue validates images and monetary inputs', function () {
@@ -70,8 +70,8 @@ test('quotation submits mixed items and ignores browser totals', function () {
     $quotation = TxnQuotation::firstOrFail();
     expect($quotation->company_id)->toBe($this->company->id)
         ->and($quotation->subtotal)->toBe('300.00')
-        ->and($quotation->tax_total)->toBe('54.00')
-        ->and($quotation->total)->toBe('354.00')
+        ->and($quotation->tax_amount)->toBe('54.00')
+        ->and($quotation->total_amount)->toBe('354.00')
         ->and($quotation->items)->toHaveCount(2);
     $this->get(route('quotations.index'))->assertSuccessful()->assertSee($quotation->number());
     $this->get(route('quotations.edit', $quotation))->assertSuccessful()->assertSee('Edit '.$quotation->number());
@@ -81,20 +81,20 @@ test('quotation submits mixed items and ignores browser totals', function () {
 test('quotation edits preserve price snapshots and allow deleted catalogue rows already quoted', function () {
     $this->post(route('quotations.store'), $this->data)->assertSessionHasNoErrors();
     $quotation = TxnQuotation::firstOrFail();
-    $clientName = $this->client->name;
+    $this->service->tax->update(['rate' => '5.0000']);
     $this->client->update(['name' => 'Changed client name']);
-    $this->service->update(['rate' => '999.00', 'gst_rate' => '5.00', 'name' => 'Changed item']);
+    $this->service->update(['rate' => '999.00', 'name' => 'Changed item']);
     $this->inventory->delete();
-    $this->data['items'] = $quotation->items->map(fn ($item) => ['quotation_item_id' => $item->id, 'catalog_item_id' => $item->catalog_item_id, 'quantity' => '3'])->all();
+    $this->data['items'] = $quotation->items->map(fn ($item) => ['quotation_item_id' => $item->id, 'catalog_item_id' => $item->item_id, 'quantity' => '3'])->all();
     $this->put(route('quotations.update', $quotation), $this->data)->assertSessionHasNoErrors()->assertRedirect();
     $quotation->refresh();
-    expect($quotation->total)->toBe('708.00')->and($quotation->items->first()->rate)->toBe('100.00')
-        ->and($quotation->client_details['name'])->toBe($clientName);
+    expect($quotation->total_amount)->toBe('708.00')->and($quotation->items->first()->rate)->toBe('100.00')
+        ->and($quotation->client->name)->toBe('Changed client name');
     $this->get(route('quotations.edit', $quotation))->assertSuccessful();
     $this->get(route('quotations.show', $quotation))->assertSuccessful()->assertDontSee('Changed item');
     $this->data['items'] = [['catalog_item_id' => $this->service->id, 'quantity' => '1']];
     $this->put(route('quotations.update', $quotation), $this->data)->assertSessionHasNoErrors();
-    expect($quotation->fresh()->total)->toBe('1048.95')->and($quotation->fresh()->items)->toHaveCount(1);
+    expect($quotation->fresh()->total_amount)->toBe('1048.95')->and($quotation->fresh()->items)->toHaveCount(1);
 });
 
 test('quotations reject foreign clients items and forged saved rows without changing data', function () {
@@ -103,12 +103,12 @@ test('quotations reject foreign clients items and forged saved rows without chan
     $foreignClient = Client::factory()->create();
     $foreignItem = Item::factory()->create();
     $foreignQuotation = TxnQuotation::factory()->create();
-    $foreignLine = $foreignQuotation->items()->create(['catalog_item_id' => $foreignItem->id, 'type' => 'service', 'name' => 'Private', 'hsn' => '998313', 'quantity' => 1, 'rate' => 1, 'gst_rate' => 0, 'subtotal' => 1, 'tax_total' => 0, 'total' => 1]);
+    $foreignLine = $foreignQuotation->items()->create(['company_id' => $foreignQuotation->company_id, 'item_id' => $foreignItem->id, 'item_type' => 'service', 'item_name' => 'Private', 'hsn_sac' => '998313', 'qty' => 1, 'rate' => 1, 'tax_rate' => 0, 'taxable_amount' => 1, 'tax_amount' => 0, 'total_amount' => 1]);
     $this->data['client_id'] = $foreignClient->id;
     $this->data['items'] = [['catalog_item_id' => $foreignItem->id, 'quotation_item_id' => $foreignLine->id, 'quantity' => 1]];
     $this->putJson(route('quotations.update', $quotation), $this->data)->assertUnprocessable()
         ->assertJsonValidationErrors(['client_id', 'items.0.catalog_item_id', 'items.0.quotation_item_id']);
-    expect($quotation->fresh()->total)->toBe('354.00')->and($quotation->fresh()->items)->toHaveCount(2);
+    expect($quotation->fresh()->total_amount)->toBe('354.00')->and($quotation->fresh()->items)->toHaveCount(2);
     foreach (['show', 'edit'] as $action) {
         $this->get(route('quotations.'.$action, $foreignQuotation))->assertNotFound();
         $this->get(route('catalog-items.'.$action, $foreignItem))->assertNotFound();
@@ -155,7 +155,7 @@ test('a failed quotation edit rolls back totals and line replacement', function 
     } finally {
         TxnHistoryItem::setEventDispatcher($dispatcher);
     }
-    expect($quotation->fresh()->total)->toBe('354.00')->and($quotation->fresh()->items->modelKeys())->toBe($oldIds);
+    expect($quotation->fresh()->total_amount)->toBe('354.00')->and($quotation->fresh()->items->modelKeys())->toBe($oldIds);
 });
 
 test('new modules enforce staff permissions on backend', function () {
