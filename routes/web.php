@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\SalesReport;
 use App\Http\Controllers\Api\Webhook\LeadWebhookController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\Web\CalendarController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\Web\Job\JobController;
 use App\Http\Controllers\Web\Ledger\LedgerController;
 use App\Http\Controllers\Web\Payment\PaymentController;
 use App\Http\Controllers\Web\Quotation\QuotationController;
+use App\Http\Controllers\Web\Report\ReportController;
 use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\StaffController;
 use App\Http\Controllers\Web\Tax\TaxController;
@@ -47,6 +49,10 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])->group(function () {
+    Route::get('reports/{type}', [ReportController::class, 'index'])
+        ->whereIn('type', array_keys(SalesReport::MODULES))->name('reports.index');
+    Route::get('reports/{type}/export', [ReportController::class, 'export'])
+        ->whereIn('type', array_keys(SalesReport::MODULES))->name('reports.export');
     Route::get('calendar', [CalendarController::class, 'index'])->middleware(EnsureLeadAccess::class)->name('calendar');
     Route::get('calendar/events', [CalendarController::class, 'events'])->middleware(EnsureLeadAccess::class)->name('calendar.events');
     // Sales Routes

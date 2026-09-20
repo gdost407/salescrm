@@ -144,6 +144,22 @@
     @endif
     @endforeach
 
+    @php($reportModules = collect(\App\Actions\SalesReport::MODULES)->filter(fn ($module) => auth()->user()->hasPermission($module['permission'])))
+    @if($reportModules->isNotEmpty())
+    <li class="menu-item {{ request()->routeIs('reports.*') ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i><div>Reports</div>
+      </a>
+      <ul class="menu-sub">
+        @foreach($reportModules as $reportType => $reportModule)
+        <li class="menu-item {{ request()->routeIs('reports.*') && request()->route('type') === $reportType ? 'active' : '' }}">
+          <a href="{{ route('reports.index', ['type' => $reportType]) }}" class="menu-link"><div>{{ $reportModule['title'] }} report</div></a>
+        </li>
+        @endforeach
+      </ul>
+    </li>
+    @endif
+
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
     </li> -->
