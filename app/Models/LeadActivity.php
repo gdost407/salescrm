@@ -12,7 +12,7 @@ class LeadActivity extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id', 'lead_id', 'user_id', 'activity_type', 'followup_type',
+        'company_id', 'lead_id', 'user_id', 'created_by', 'activity_type', 'followup_type',
         'subject', 'summary', 'scheduled_at', 'completed_at', 'status', 'metadata',
     ];
 
@@ -38,6 +38,11 @@ class LeadActivity extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function creator(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     public function notifications(): HasMany

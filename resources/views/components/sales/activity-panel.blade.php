@@ -16,7 +16,7 @@
       @forelse ($entries as $entry)
         <div class="border-bottom pb-3 mb-3">
           <div class="d-flex justify-content-between gap-2">
-            <div><strong>{{ $entry->subject ?: $label }}</strong><small class="d-block text-body-secondary">{{ $entry->created_at->diffForHumans() }}</small></div>
+            <div><strong>{{ $entry->subject ?: $label }}</strong><small class="d-block text-body-secondary">{{ $entry->created_at->diffForHumans() }} · Created by {{ $entry->creator?->name ?? $entry->user?->name ?? 'System' }}</small></div>
             <div class="text-nowrap">
               @php($activityStatus = $entry->metadata['activity_status'] ?? $entry->status)
               @if (auth()->user()->canAccessLeadActivity($lead, 'edit', $type, $entry) && (($type === 'notes' || $type === 'call') ? $entry->id === $latestNoteOrCall : $activityStatus === 'pending'))

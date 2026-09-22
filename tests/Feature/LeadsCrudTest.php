@@ -413,7 +413,7 @@ test('a user can view a company lead with its details', function () {
 });
 
 test('a user can add an activity to a lead', function () {
-    $company = Company::create(['name' => 'Acme', 'slug' => 'acme']);
+    $company = Company::create(['name' => 'Acme', 'slug' => 'acme', 'onboarding_completed_at' => now()]);
     $user = leadCrudUser($company, ['view_all_leads', 'create_all_activities']);
     $lead = Lead::create([
         'company_id' => $company->id,
@@ -433,11 +433,13 @@ test('a user can add an activity to a lead', function () {
     $activity = LeadActivity::query()->firstOrFail();
     expect($activity->lead_id)->toBe($lead->id)
         ->and($activity->user_id)->toBe($user->id)
+        ->and($activity->created_by)->toBe($user->id)
         ->and($activity->status)->toBe('completed');
 
     $this->actingAs($user)->get(route('sales-lead-view', $lead))
         ->assertSee('Introductory call')
-        ->assertSee('Discussed requirements.');
+        ->assertSee('Discussed requirements.')
+        ->assertSee('Created by '.$user->name);
 });
 
 test('kanban supports in-place lead creation, details, and status changes', function () {

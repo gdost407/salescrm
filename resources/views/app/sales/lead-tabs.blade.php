@@ -16,7 +16,7 @@
         <div class="col-md-6"><span class="text-body-secondary d-block">Current Status</span><strong>{{ $lead->status }}</strong></div>
       </div></div></div>
       <div class="card mb-6"><h5 class="card-header">Last 5 Activity Entries</h5><div class="card-body">
-        @forelse ($activities->take(5) as $activity)<div class="border-bottom pb-3 mb-3"><strong>{{ $activity->subject }}</strong><small class="text-body-secondary float-end">{{ $activity->created_at->diffForHumans() }}</small><p class="mb-0">{{ $activity->summary ?: '-' }}</p></div>@empty<p class="mb-0 text-body-secondary">No activity recorded for this lead.</p>@endforelse
+        @forelse ($activities->take(5) as $activity)<div class="border-bottom pb-3 mb-3"><strong>{{ $activity->subject }}</strong><small class="text-body-secondary float-end">{{ $activity->created_at->diffForHumans() }}</small><p class="mb-0">{{ $activity->summary ?: '-' }}</p><small class="text-body-secondary">Created by {{ $activity->creator?->name ?? $activity->user?->name ?? 'System' }}</small></div>@empty<p class="mb-0 text-body-secondary">No activity recorded for this lead.</p>@endforelse
       </div></div>
     </div>
 
@@ -38,7 +38,7 @@
 
     <div class="tab-pane fade" id="lead-timeline" role="tabpanel"><div class="card mb-6"><h5 class="card-header">User Activity Timeline</h5><div class="card-body pt-1"><ul class="timeline mb-0">
       @forelse ($timeline as $activity)
-        <li class="timeline-item timeline-item-transparent"><span class="timeline-point timeline-point-primary"></span><div class="timeline-event"><div class="timeline-header mb-3"><h6 class="mb-0">{{ $activity->subject ?: ucfirst($activity->activity_type) }}</h6><small class="text-body-secondary">{{ $activity->created_at->diffForHumans() }}</small></div><p class="mb-2">{{ $activity->summary ?: 'No summary added.' }}</p><small class="text-body-secondary">{{ ucfirst($activity->activity_type) }} by {{ $activity->user?->name ?: 'System' }}</small>@if (($activity->metadata['activity_status'] ?? $activity->status) === 'rescheduled') <span class="badge bg-label-warning ms-2">Rescheduled</span> @elseif ($activity->status === 'completed') <span class="badge bg-label-success ms-2">Completed</span> @endif</div></li>
+        <li class="timeline-item timeline-item-transparent"><span class="timeline-point timeline-point-primary"></span><div class="timeline-event"><div class="timeline-header mb-3"><h6 class="mb-0">{{ $activity->subject ?: ucfirst($activity->activity_type) }}</h6><small class="text-body-secondary">{{ $activity->created_at->diffForHumans() }}</small></div><p class="mb-2">{{ $activity->summary ?: 'No summary added.' }}</p><small class="text-body-secondary">Created by {{ $activity->creator?->name ?? $activity->user?->name ?? 'System' }}</small>@if (($activity->metadata['activity_status'] ?? $activity->status) === 'rescheduled') <span class="badge bg-label-warning ms-2">Rescheduled</span> @elseif ($activity->status === 'completed') <span class="badge bg-label-success ms-2">Completed</span> @endif</div></li>
       @empty
         <li class="timeline-item timeline-item-transparent"><span class="timeline-point timeline-point-primary"></span><div class="timeline-event"><p class="mb-2">No timeline records for this lead.</p></div></li>
       @endforelse

@@ -179,6 +179,7 @@ class LeadWebhookController extends Controller
             'company_id' => $company->id,
             'lead_id' => $lead->id,
             'user_id' => data_get($integration->configuration, 'generated_by'),
+            'created_by' => data_get($integration->configuration, 'generated_by'),
             'activity_type' => 'notes',
             'subject' => 'Lead created via Webhook API',
             'summary' => 'Lead was created from external API webhook integration.',

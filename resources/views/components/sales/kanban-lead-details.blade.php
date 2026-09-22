@@ -19,7 +19,7 @@
         <div class="border-bottom pb-3 mb-3">
             <div class="d-flex justify-content-between gap-2"><strong>{{ $activity->subject ?: ucfirst($activity->activity_type) }}</strong><small class="text-body-secondary">{{ $activity->created_at->diffForHumans() }}</small></div>
             @if ($activity->summary)<p class="mb-1 mt-1">{{ $activity->summary }}</p>@endif
-            <small class="text-body-secondary">{{ ucfirst($activity->activity_type) }} by {{ $activity->user?->name ?: 'System' }}</small>
+            <small class="text-body-secondary">Created by {{ $activity->creator?->name ?? $activity->user?->name ?? 'System' }}</small>
         </div>
     @empty
         <p class="text-body-secondary mb-0">No activity recorded for this lead.</p>

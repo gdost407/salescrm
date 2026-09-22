@@ -206,7 +206,7 @@ class SalesController extends Controller
         $lead->load([
             'assignee:id,name',
             'creator:id,name',
-            'activities' => fn ($query) => $query->with('user:id,name')->latest(),
+            'activities' => fn ($query) => $query->with(['creator:id,name', 'user:id,name'])->latest(),
         ]);
 
         return response()->json([
@@ -832,7 +832,7 @@ class SalesController extends Controller
 
     private function leadViewData(Lead $lead): array
     {
-        $lead->load(['assignee', 'creator', 'activities.user', 'attachments', 'activities' => fn ($query) => $query->latest()]);
+        $lead->load(['assignee', 'creator', 'activities.creator', 'activities.user', 'attachments', 'activities' => fn ($query) => $query->latest()]);
         $activities = $lead->activities;
         $activityEntries = $activities->groupBy('activity_type');
         $timeline = $activities->sortByDesc('created_at')->values();
@@ -845,6 +845,7 @@ class SalesController extends Controller
         $lead->activities()->create([
             'company_id' => $lead->company_id,
             'user_id' => $userId,
+            'created_by' => $userId,
             'activity_type' => 'notes',
             'subject' => $subject,
             'summary' => $summary,
@@ -876,6 +877,7 @@ class SalesController extends Controller
         return [
             'company_id' => $lead->company_id,
             'user_id' => $userId,
+            'created_by' => $userId,
             'activity_type' => $activityType,
             'followup_type' => $activityType === 'followup' ? 'call' : null,
             'subject' => $subject,
