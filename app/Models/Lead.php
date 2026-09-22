@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -28,6 +29,19 @@ class Lead extends Model
             'last_contacted_at' => 'datetime',
             'last_activity_at' => 'datetime',
         ];
+    }
+
+    public function scopeVisibleTo(Builder $query, User $user): Builder
+    {
+        $query->where('company_id', $user->company_id);
+
+        if ($user->hasPermission('view_all_leads')) {
+            return $query;
+        }
+
+        return $user->hasPermission('view_own_leads')
+            ? $query->where('assigned_to', $user->id)
+            : $query->whereRaw('1 = 0');
     }
 
     public function company(): BelongsTo

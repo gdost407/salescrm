@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Webhook;
 
+use App\Actions\SaveLead;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Integration;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 
 class LeadWebhookController extends Controller
 {
+    public function __construct(private SaveLead $saveLead) {}
+
     public function store(Request $request): JsonResponse
     {
         $startTime = now();
@@ -148,7 +151,7 @@ class LeadWebhookController extends Controller
         //     ->value('name') ?? 'New';
         $defaultStage = 'New';
 
-        $lead = Lead::create([
+        $lead = $this->saveLead->handle([
             'company_id' => $company->id,
             'name' => $validated['name'],
             'email' => $validated['email'] ?? null,
@@ -159,7 +162,7 @@ class LeadWebhookController extends Controller
             'deal_amount' => $validated['deal_amount'] ?? 0,
             'stage' => $validated['stage'] ?? $defaultStage,
             'status' => $validated['status'] ?? $defaultStatus,
-            'source' => $validated['source'] ?? 'Webhook',
+            'source' => $validated['source'] ?? 'Google',
             'assigned_to' => $validated['assigned_to'] ?? null,
             'address' => $validated['address'] ?? null,
             'city' => $validated['city'] ?? null,
@@ -206,18 +209,18 @@ class LeadWebhookController extends Controller
             ],
         ];
 
-        WebhookLog::create([
-            'company_id' => $company->id,
-            'integration_id' => $integration->id,
-            'event' => 'lead.create',
-            'request_id' => $requestId,
-            'payload' => $request->all(),
-            'response' => $successResponse,
-            'status_code' => 201,
-            'status' => 'success',
-            'received_at' => $startTime,
-            'processed_at' => now(),
-        ]);
+        // WebhookLog::create([
+        //     'company_id' => $company->id,
+        //     'integration_id' => $integration->id,
+        //     'event' => 'lead.create',
+        //     'request_id' => $requestId,
+        //     'payload' => $request->all(),
+        //     'response' => $successResponse,
+        //     'status_code' => 201,
+        //     'status' => 'success',
+        //     'received_at' => $startTime,
+        //     'processed_at' => now(),
+        // ]);
 
         return response()->json($successResponse, 201);
     }

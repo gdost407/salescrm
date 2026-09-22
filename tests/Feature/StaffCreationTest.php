@@ -4,6 +4,7 @@ use App\Http\Middleware\EnsureCompanyOnboardingComplete;
 use App\Jobs\SendStaffCredentialsEmail;
 use App\Mail\StaffCredentials;
 use App\Models\Company;
+use App\Models\Role;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
@@ -114,16 +115,20 @@ test('company owner can view edit staff page and update staff details', function
         'email' => 'original@example.com',
     ]);
 
-    $this->actingAs($owner)->get(route('staff.edit', $staff))->assertOk();
+    $this->actingAs($owner)->get(route('staff.edit', $staff))
+        ->assertSuccessful()->assertSee('Administrator')->assertSee('Sales Staff');
+    $role = Role::where('company_id', $company->id)->where('slug', 'sales-staff')->firstOrFail();
 
     $response = $this->actingAs($owner)->put(route('staff.update', $staff), staffPayload([
         'name' => 'Updated Name',
         'email' => 'updated@example.com',
+        'role_id' => $role->id,
     ]));
 
     $response->assertRedirect(route('staff-manage', absolute: false));
     expect($staff->fresh()->name)->toBe('Updated Name')
-        ->and($staff->fresh()->email)->toBe('updated@example.com');
+        ->and($staff->fresh()->email)->toBe('updated@example.com')
+        ->and($staff->fresh()->role_id)->toBe($role->id);
 });
 
 test('company owner can resend password to staff member', function () {

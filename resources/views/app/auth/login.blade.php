@@ -12,6 +12,9 @@
       <!-- Register -->
       <div class="card">
         <div class="card-body">
+          @if (session('access_error'))
+            <div class="alert alert-danger" role="alert">{{ session('access_error') }}</div>
+          @endif
           <!-- Logo -->
           <div class="app-brand justify-content-center">
             <a href="{{ route('login') }}" class="app-brand-link gap-2">

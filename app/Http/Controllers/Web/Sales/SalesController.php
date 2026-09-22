@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web\Sales;
 
+use App\Actions\SaveLead;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CompleteLeadActivityRequest;
 use App\Http\Requests\StoreLeadActivityRequest;
@@ -29,6 +30,8 @@ use Illuminate\Validation\ValidationException;
 
 class SalesController extends Controller
 {
+    public function __construct(private SaveLead $saveLead) {}
+
     /**
      * Show the sales kanban board.
      */
@@ -114,8 +117,10 @@ class SalesController extends Controller
 
         if ($lead->status !== $status) {
             $oldStatus = $lead->status;
-            $lead->update(['status' => $status]);
+            $lead = $this->saveLead->handle(['status' => $status], $lead);
             $this->recordLeadEvent($lead, $request->user()->id, 'Status changed', $oldStatus.' -> '.$status);
+        } elseif ($status === 'Converted') {
+            $lead = $this->saveLead->handle(['status' => $status], $lead);
         }
 
         return response()->json(['message' => 'Lead status updated.', 'status' => $lead->status]);
@@ -178,7 +183,7 @@ class SalesController extends Controller
     {
         $companyId = $this->ensureCompany($request);
         $validated = $this->validatedLeadData($request->validated(), $companyId);
-        $lead = Lead::create($validated + ['company_id' => $companyId, 'created_by' => $request->user()->id]);
+        $lead = $this->saveLead->handle($validated + ['company_id' => $companyId, 'created_by' => $request->user()->id]);
         $this->recordLeadEvent($lead, $request->user()->id, 'Lead created', 'Lead was created.');
 
         if ($request->expectsJson()) {
@@ -221,7 +226,7 @@ class SalesController extends Controller
     {
         $this->ensureLeadBelongsToUserCompany($request, $lead);
         $oldStatus = $lead->status;
-        $lead->update($this->validatedLeadData($request->validated(), (int) $request->user()->company_id));
+        $lead = $this->saveLead->handle($this->validatedLeadData($request->validated(), (int) $request->user()->company_id), $lead);
 
         if ($oldStatus !== $lead->status) {
             $this->recordLeadEvent($lead, $request->user()->id, 'Status changed', $oldStatus.' -> '.$lead->status);
@@ -495,7 +500,7 @@ class SalesController extends Controller
             $leads[] = $validated + ['company_id' => $companyId, 'created_by' => $request->user()->id];
         }
 
-        DB::transaction(fn () => collect($leads)->each(fn ($lead) => Lead::create($lead)));
+        DB::transaction(fn () => collect($leads)->each(fn ($lead) => $this->saveLead->handle($lead)));
 
         return view('app.sales.import-result', [
             'importedCount' => count($leads),
@@ -519,10 +524,10 @@ class SalesController extends Controller
 
     private function filteredLeads(Request $request, array $filters)
     {
-        $isStaffUser = $request->user()?->user_type === 'staff';
+        $isStaffUser = ! $request->user()->hasPermission('view_all_leads');
 
         return Lead::query()
-            ->where('company_id', $request->user()->company_id)
+            ->visibleTo($request->user())
             ->with('assignee:id,name')
             ->when($isStaffUser, fn ($query) => $query->where('assigned_to', $request->user()->id))
             ->when($filters['search'], function ($query, $search) {
@@ -544,7 +549,7 @@ class SalesController extends Controller
 
     private function leadListFilters(Request $request): array
     {
-        $isStaffUser = $request->user()?->user_type === 'staff';
+        $isStaffUser = ! $request->user()->hasPermission('view_all_leads');
         $validated = $request->validate([
             'search' => ['nullable', 'string', 'max:255'],
             'date_range' => ['nullable', Rule::in(['today', 'week', 'month', '3_month', 'year', 'custom'])],

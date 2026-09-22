@@ -16,6 +16,9 @@ class User extends Authenticatable // implements MustVerifyEmail
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable;
 
+    /** @var array<string, mixed> */
+    protected $attributes = ['is_active' => true];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -117,11 +120,73 @@ class User extends Authenticatable // implements MustVerifyEmail
 
     public function hasPermission(string $permission): bool
     {
+        if (! $this->is_active || ! $this->company_id || ! array_key_exists($permission, array_merge(...array_values(Permission::MODULES)))) {
+            return false;
+        }
+
         if ($this->user_type === 'owner') {
             return true;
         }
 
-        return $this->role?->permissions()->where('permissions.slug', $permission)->exists() ?? false;
+        $this->loadMissing('role.permissions');
+        $role = $this->role;
+
+        if (! $this->is_active || ! $role?->status || (int) $role->company_id !== (int) $this->company_id) {
+            return false;
+        }
+
+        $permissionSlugs = [$permission];
+        if (str_contains($permission, '_own_')) {
+            $permissionSlugs[] = str_replace('_own_', '_all_', $permission);
+        }
+
+        return $role->permissions
+            ->where('company_id', $this->company_id)
+            ->where('status', true)
+            ->whereIn('slug', $permissionSlugs)
+            ->isNotEmpty();
+    }
+
+    public function canManageStaffAccount(User $staff, string $action = 'edit'): bool
+    {
+        return (int) $staff->company_id === (int) $this->company_id
+            && $staff->user_type === 'staff'
+            && in_array($action, ['view', 'edit', 'delete'], true)
+            && $this->hasPermission($action.'_staff');
+    }
+
+    public function canAccessLeadActivity(Lead $lead, string $action, string $type, ?LeadActivity $activity = null): bool
+    {
+        if (! $this->canAccessLead($lead) || ($activity && ((int) $activity->company_id !== (int) $lead->company_id || (int) $activity->lead_id !== (int) $lead->id))) {
+            return false;
+        }
+
+        $scheduled = in_array($type, ['followup', 'visit', 'gmeet'], true);
+        $permission = match ($action) {
+            'create' => $scheduled ? 'schedule_%s_followups' : 'create_%s_activities',
+            'edit' => $scheduled ? 'manage_%s_followups' : 'edit_%s_activities',
+            'delete' => 'delete_%s_activities',
+            'complete' => $scheduled ? 'work_%s_followups' : null,
+            default => null,
+        };
+
+        if ($permission === null) {
+            return false;
+        }
+
+        return $this->hasPermission(sprintf($permission, 'all'))
+            || (((int) $lead->assigned_to === (int) $this->id || ($activity && (int) $activity->user_id === (int) $this->id))
+                && $this->hasPermission(sprintf($permission, 'own')));
+    }
+
+    public function canAccessLead(Lead $lead, string $action = 'view'): bool
+    {
+        if ((int) $lead->company_id !== (int) $this->company_id || ! in_array($action, ['view', 'edit', 'delete'], true)) {
+            return false;
+        }
+
+        return $this->hasPermission($action.'_all_leads')
+            || ((int) $lead->assigned_to === (int) $this->id && $this->hasPermission($action.'_own_leads'));
     }
 
     /**

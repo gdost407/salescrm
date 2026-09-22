@@ -3,6 +3,9 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Symfony\Component\HttpKernel\Exception\HttpExceptionInterface;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -17,5 +20,12 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
-        //
+        $exceptions->render(function (HttpExceptionInterface $exception, Request $request): ?RedirectResponse {
+            if ($exception->getStatusCode() !== 403 || $request->expectsJson() || $request->is('api/*', 'webhook/*') || ! $request->hasSession()) {
+                return null;
+            }
+
+            return redirect()->route($request->user() ? 'dashboard' : 'login')
+                ->with('access_error', 'You do not have permission to perform that action.');
+        });
     })->create();

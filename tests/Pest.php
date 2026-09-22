@@ -1,7 +1,11 @@
 <?php
 
+use Illuminate\Database\Migrations\Migrator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
+
+// The current Client schema replaces the legacy create-clients migration.
+Migrator::withoutMigrations(['2026_08_20_172551_create_clients_table']);
 
 /*
 |--------------------------------------------------------------------------

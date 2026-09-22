@@ -89,7 +89,7 @@
               <label class="form-label" for="role_id">CRM Role Access</label>
               <div class="input-group input-group-merge">
                 <span id="role-id-icon" class="input-group-text text-danger"><i class="icon-base bx bx-lock-alt"></i></span>
-                <select name="role_id" class="form-select" id="role_id" aria-label="CRM role access">
+                <select name="role_id" class="form-select" id="role_id" aria-label="CRM role access" @disabled(! auth()->user()->hasPermission('edit_staff'))>
                   <option value="">Select access role</option>
                   @foreach ($roles ?? [] as $roleOption)
                     <option value="{{ $roleOption->id }}" @selected(old('role_id') == $roleOption->id)>{{ $roleOption->name }}</option>

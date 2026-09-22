@@ -6,26 +6,27 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Client extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
-        'company_id', 'lead_id', 'created_by', 'name', 'email', 'phone',
-        'alternate_phone', 'company_name', 'designation', 'address', 'city',
-        'state', 'country', 'pincode', 'notes', 'status',
+        'company_id', 'client_code', 'type', 'name', 'company_name', 'email', 'mobile',
+        'gst_no', 'pan_no', 'billing_address', 'shipping_address', 'country', 'state',
+        'city', 'zip_code', 'notes', 'created_by', 'is_active',
     ];
+
+    protected $attributes = ['type' => 'business', 'is_active' => true];
+
+    protected function casts(): array
+    {
+        return ['is_active' => 'boolean'];
+    }
 
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
-    }
-
-    public function lead(): BelongsTo
-    {
-        return $this->belongsTo(Lead::class);
     }
 
     public function creator(): BelongsTo
@@ -41,5 +42,30 @@ class Client extends Model
     public function notifications(): HasMany
     {
         return $this->hasMany(Notification::class);
+    }
+
+    public function quotations(): HasMany
+    {
+        return $this->hasMany(TxnQuotation::class);
+    }
+
+    public function jobs(): HasMany
+    {
+        return $this->hasMany(TxnJob::class);
+    }
+
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(TxnInvoice::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(TxnPayment::class);
+    }
+
+    public function ledgerEntries(): HasMany
+    {
+        return $this->hasMany(TxnLedger::class);
     }
 }

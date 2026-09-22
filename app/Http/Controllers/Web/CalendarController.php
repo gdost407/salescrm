@@ -28,6 +28,7 @@ class CalendarController extends Controller
             'lead:id,name,email,mobile,status,stage,source,assigned_to,address,country,state,city,pincode',
         ])
             ->where('company_id', $user->company_id)
+            ->whereHas('lead', fn ($query) => $query->visibleTo($user))
             ->whereIn('activity_type', ['followup', 'visit', 'gmeet'])
             ->whereNotNull('scheduled_at')
             ->when($start, fn ($q) => $q->where('scheduled_at', '>=', $start))

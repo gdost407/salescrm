@@ -254,19 +254,19 @@
     const selectedState = stateSelect?.dataset.selected || '';
     const selectedCity = citySelect?.dataset.selected || '';
 
-    if (!countrySelect || !stateSelect || !citySelect || !window.appAjax) {
+    if (!countrySelect || !stateSelect || !citySelect) {
       return;
     }
 
     const searchableSelects = new Map(
       [countrySelect, stateSelect, citySelect].map((select) => [
         select,
-        new TomSelect(select, {
+        typeof window.TomSelect === 'function' ? new window.TomSelect(select, {
           create: false,
           maxOptions: null,
           searchField: ['text'],
           placeholder: select.dataset.placeholder,
-        }),
+        }) : null,
       ]),
     );
 
@@ -278,79 +278,94 @@
         return { value: name, text: name };
       });
 
-      searchableSelect.clearOptions();
-      searchableSelect.addOptions(options);
-      searchableSelect.setValue(selectedValue, true);
-      searchableSelect.settings.placeholder = placeholder;
-      searchableSelect.refreshOptions(false);
+      const normalize = (value) => String(value ?? '').trim().toLocaleLowerCase();
+      const match = selectedValue && options.find((option) => normalize(option.value) === normalize(selectedValue));
+      if (match) {
+        selectedValue = match.value;
+      } else if (selectedValue) {
+        options.push({ value: selectedValue, text: `${selectedValue} (saved value)` });
+      }
 
-      if (values.length === 0) {
-        searchableSelect.disable();
-      } else {
+      if (searchableSelect) {
+        searchableSelect.clear(true);
+        searchableSelect.clearOptions();
+        searchableSelect.addOptions(options);
+        searchableSelect.settings.placeholder = placeholder;
+        searchableSelect.setValue(selectedValue || '', true);
+        searchableSelect.refreshOptions(false);
         searchableSelect.enable();
+      } else {
+        select.replaceChildren(new Option(placeholder, ''), ...options.map((option) => new Option(option.text, option.value)));
+        select.value = selectedValue || '';
+        select.disabled = false;
       }
     };
 
-    const loadStates = async (country, selectedValue = '') => {
-      stateSelect.disabled = true;
-      citySelect.disabled = true;
-      setOptions(stateSelect, [], 'Loading states...');
-      setOptions(citySelect, [], 'Select city');
-
-      const states = await window.appAjax.get('{{ route('locations.states') }}', { country });
-      setOptions(stateSelect, states, 'Select state', selectedValue);
-    };
-
-    const loadCities = async (country, state, selectedValue = '') => {
-      citySelect.disabled = true;
-      setOptions(citySelect, [], 'Loading cities...');
-
-      const cities = await window.appAjax.get('{{ route('locations.cities') }}', { country, state });
-      setOptions(citySelect, cities, 'Select city', selectedValue);
-    };
-
-    countrySelect.addEventListener('change', async () => {
-      if (!countrySelect.value) {
-        setOptions(stateSelect, [], 'Select state');
-        setOptions(citySelect, [], 'Select city');
-        return;
+    const getLocations = async (url, params = {}) => {
+      const response = await fetch(`${url}?${new URLSearchParams(params)}`, {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+      });
+      const payload = await response.json();
+      if (!response.ok || !Array.isArray(payload.data)) {
+        throw new Error(payload.message || 'Unable to load locations');
       }
+      return payload.data;
+    };
 
+    let statesRequest = 0;
+    let citiesRequest = 0;
+    let countries = [];
+    let states = [];
+
+    const loadCities = async (selectedValue = '') => {
+      const request = ++citiesRequest;
+      const country = countrySelect.value;
+      const state = stateSelect.value;
+      setOptions(citySelect, [], 'Select city', selectedValue);
+      if (!states.some((item) => item.name === state)) return;
       try {
-        await loadStates(countrySelect.value);
+        const cities = await getLocations('{{ route('locations.cities') }}', { country, state });
+        if (request === citiesRequest) setOptions(citySelect, cities, 'Select city', citySelect.value);
       } catch (error) {
-        setOptions(stateSelect, [], 'Unable to load states');
+        if (request === citiesRequest) setOptions(citySelect, [], 'Unable to load cities — select state again to retry', citySelect.value);
         console.error(error);
       }
-    });
+    };
 
-    stateSelect.addEventListener('change', async () => {
-      if (!stateSelect.value) {
-        setOptions(citySelect, [], 'Select city');
-        return;
-      }
-
+    const loadStates = async (selectedValue = '', cityValue = '') => {
+      const request = ++statesRequest;
+      ++citiesRequest;
+      const country = countrySelect.value;
+      states = [];
+      setOptions(stateSelect, [], 'Select state', selectedValue);
+      setOptions(citySelect, [], 'Select city', cityValue);
+      if (!countries.some((item) => item.name === country)) return;
       try {
-        await loadCities(countrySelect.value, stateSelect.value);
+        const result = await getLocations('{{ route('locations.states') }}', { country });
+        if (request !== statesRequest) return;
+        states = result;
+        setOptions(stateSelect, states, 'Select state', stateSelect.value);
+        await loadCities(citySelect.value);
       } catch (error) {
-        setOptions(citySelect, [], 'Unable to load cities');
+        if (request === statesRequest) setOptions(stateSelect, [], 'Unable to load states — select country again to retry', stateSelect.value);
         console.error(error);
       }
-    });
+    };
+
+    countrySelect.addEventListener('change', () => loadStates());
+    stateSelect.addEventListener('change', () => loadCities());
+
+    setOptions(countrySelect, [], 'Select country', selectedCountry);
+    setOptions(stateSelect, [], 'Select state', selectedState);
+    setOptions(citySelect, [], 'Select city', selectedCity);
 
     try {
-      const countries = await window.appAjax.get('{{ route('locations.countries') }}');
-      setOptions(countrySelect, countries, 'Select country', selectedCountry);
-
-      if (countrySelect.value) {
-        await loadStates(countrySelect.value, selectedState);
-
-        if (stateSelect.value) {
-          await loadCities(countrySelect.value, stateSelect.value, selectedCity);
-        }
-      }
+      countries = await getLocations('{{ route('locations.countries') }}');
+      setOptions(countrySelect, countries, 'Select country', countrySelect.value);
+      await loadStates(stateSelect.value, citySelect.value);
     } catch (error) {
-      setOptions(countrySelect, [], 'Unable to load countries');
+      setOptions(countrySelect, [], 'Unable to load countries — reload to retry', countrySelect.value);
       console.error(error);
     }
   });

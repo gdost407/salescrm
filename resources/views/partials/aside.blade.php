@@ -75,6 +75,7 @@
       </a>
     </li>
 
+    @if (auth()->user()->hasPermission('view_own_leads'))
     <li class="menu-item {{ request()->routeIs('calendar') ? 'active' : '' }}">
       <a href="{{ route('calendar') }}" class="menu-link">
         <i class="menu-icon tf-icons bx bx-calendar"></i>
@@ -89,7 +90,9 @@
       </a>
     </li>
 
+    @endif
     <!-- sales -->
+    @if (auth()->user()->hasPermission('create_leads') || auth()->user()->hasPermission('view_own_leads') || auth()->user()->hasPermission('edit_all_leads'))
     <li class="menu-item {{ request()->routeIs('sales-*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-layout"></i>
@@ -97,50 +100,100 @@
       </a>
 
       <ul class="menu-sub">
+        @if (auth()->user()->hasPermission('create_leads'))
         <li class="menu-item {{ request()->routeIs('sales-create-lead') ? 'active' : '' }}">
           <a href="{{ route('sales-create-lead') }}" class="menu-link">
             <div data-i18n="Without menu">Create Lead</div>
           </a>
         </li>
+        @endif
+        @if (auth()->user()->hasPermission('view_own_leads'))
         <li class="menu-item {{ request()->routeIs('sales-all-list') ? 'active' : '' }}">
           <a href="{{ route('sales-all-list') }}" class="menu-link">
             <div data-i18n="Without navbar">All List</div>
           </a>
         </li>
+        @endif
+        @if (auth()->user()->hasPermission('edit_all_leads'))
         <li class="menu-item {{ request()->routeIs('sales-lead-settings') ? 'active' : '' }}">
           <a href="{{ route('sales-lead-settings') }}" class="menu-link">
             <div data-i18n="Container">Lead Settings</div>
           </a>
         </li>
+        @endif
       </ul>
     </li>
+    @endif
+
+    @foreach ([
+        ['clients', 'clients', 'Clients', 'bx-user'],
+        ['taxes', 'taxes', 'Taxes', 'bx-calculator'],
+        ['items', 'catalog_items', 'Services / Inventory', 'bx-package'],
+        ['quotations', 'quotations', 'Quotations', 'bx-file'],
+        ['jobs', 'jobs', 'Jobs', 'bx-briefcase'],
+        ['invoices', 'invoices', 'Invoices', 'bx-receipt'],
+        ['payments', 'payments', 'Payments', 'bx-wallet'],
+        ['ledger', 'ledger', 'Ledger', 'bx-book'],
+    ] as [$salesResource, $salesPermission, $salesLabel, $salesIcon])
+    @if (auth()->user()->hasPermission('view_'.$salesPermission) || auth()->user()->hasPermission('create_'.$salesPermission))
+    <li class="menu-item {{ request()->routeIs($salesResource.'.*') ? 'active' : '' }}">
+      <a href="{{ route($salesResource.(auth()->user()->hasPermission('view_'.$salesPermission) ? '.index' : '.create')) }}" class="menu-link">
+        <i class="menu-icon tf-icons bx {{ $salesIcon }}"></i><div>{{ $salesLabel }}</div>
+      </a>
+    </li>
+    @endif
+    @endforeach
+
+    @php($reportModules = collect(\App\Actions\SalesReport::MODULES)->filter(fn ($module) => auth()->user()->hasPermission($module['permission'])))
+    @if($reportModules->isNotEmpty())
+    <li class="menu-item {{ request()->routeIs('reports.*') ? 'active open' : '' }}">
+      <a href="javascript:void(0);" class="menu-link menu-toggle">
+        <i class="menu-icon tf-icons bx bx-bar-chart-alt-2"></i><div>Reports</div>
+      </a>
+      <ul class="menu-sub">
+        @foreach($reportModules as $reportType => $reportModule)
+        <li class="menu-item {{ request()->routeIs('reports.*') && request()->route('type') === $reportType ? 'active' : '' }}">
+          <a href="{{ route('reports.index', ['type' => $reportType]) }}" class="menu-link"><div>{{ $reportModule['title'] }} report</div></a>
+        </li>
+        @endforeach
+      </ul>
+    </li>
+    @endif
 
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
     </li> -->
-    <li class="menu-item {{ request()->routeIs('staff-*') ? 'active open' : '' }}">
+    @if (auth()->user()->hasPermission('create_staff') || auth()->user()->hasPermission('view_staff') || auth()->user()->hasPermission('edit_staff'))
+    <li class="menu-item {{ request()->routeIs('staff-*', 'staff.*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>
         <div data-i18n="Account Settings">Staff</div>
       </a>
       <ul class="menu-sub">
+        @if (auth()->user()->hasPermission('create_staff'))
         <li class="menu-item {{ request()->routeIs('staff-create') ? 'active' : '' }}">
           <a href="{{ route('staff-create') }}" class="menu-link">
             <div data-i18n="Account">Create Staff</div>
           </a>
         </li>
+        @endif
+        @if (auth()->user()->hasPermission('view_staff'))
         <li class="menu-item {{ request()->routeIs('staff-manage') ? 'active' : '' }}">
           <a href="{{ route('staff-manage') }}" class="menu-link">
             <div data-i18n="Notifications">Manage Staff</div>
           </a>
         </li>
-        <li class="menu-item {{ request()->routeIs('staff-roles') ? 'active' : '' }}">
+        @endif
+        @if (auth()->user()->hasPermission('edit_staff'))
+        <li class="menu-item {{ request()->routeIs('staff-roles', 'staff.roles.*') ? 'active' : '' }}">
           <a href="{{ route('staff-roles') }}" class="menu-link">
             <div data-i18n="Connections">Roles</div>
           </a>
         </li>
+        @endif
       </ul>
     </li>
+    @endif
     <li class="menu-item {{ request()->routeIs('integration-*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>

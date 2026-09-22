@@ -75,8 +75,8 @@
                 <span class="input-group-text text-danger"><i class="icon-base bx bx-pin"></i></span>
                 <select name="job_role" class="form-select" id="job_role" required>
                   @php
-                  $roles = ['Manager', 'Employee', 'Intern'];
-                  foreach ($roles as $r) {
+                  $jobRoles = ['Manager', 'Employee', 'Intern'];
+                  foreach ($jobRoles as $r) {
                     $selected = old('job_role', $staff->job_role) == $r ? 'selected' : '';
                     echo "<option value=\"$r\" $selected>$r</option>";
                   }
@@ -90,7 +90,7 @@
               <label class="form-label" for="role_id">CRM Role Access</label>
               <div class="input-group input-group-merge">
                 <span class="input-group-text text-danger"><i class="icon-base bx bx-lock-alt"></i></span>
-                <select name="role_id" class="form-select" id="role_id">
+                <select name="role_id" class="form-select" id="role_id" @disabled(! auth()->user()->hasPermission('edit_staff') || (int) auth()->id() === (int) $staff->id)>
                   <option value="">Select access role</option>
                   @foreach ($roles ?? [] as $roleOption)
                     <option value="{{ $roleOption->id }}" @selected(old('role_id', $staff->role_id) == $roleOption->id)>{{ $roleOption->name }}</option>
