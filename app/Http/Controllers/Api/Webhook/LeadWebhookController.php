@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers\Api\Webhook;
 
-use App\Actions\SaveLead;
+use App\Actions\CreateWebhookLead;
 use App\Http\Controllers\Controller;
 use App\Models\Company;
 use App\Models\Integration;
@@ -17,7 +17,7 @@ use Illuminate\Support\Str;
 
 class LeadWebhookController extends Controller
 {
-    public function __construct(private SaveLead $saveLead) {}
+    public function __construct(private CreateWebhookLead $createWebhookLead) {}
 
     public function store(Request $request): JsonResponse
     {
@@ -40,7 +40,6 @@ class LeadWebhookController extends Controller
             'stage' => ['nullable', 'string', 'max:255'],
             'status' => ['nullable', 'string', 'max:255'],
             'source' => ['nullable', 'string', 'max:255'],
-            'assigned_to' => ['nullable', 'integer', 'exists:users,id'],
             'address' => ['nullable', 'string', 'max:65535'],
             'city' => ['nullable', 'string', 'max:255'],
             'state' => ['nullable', 'string', 'max:255'],
@@ -151,7 +150,7 @@ class LeadWebhookController extends Controller
         //     ->value('name') ?? 'New';
         $defaultStage = 'New';
 
-        $lead = $this->saveLead->handle([
+        $lead = $this->createWebhookLead->handle([
             'company_id' => $company->id,
             'name' => $validated['name'],
             'email' => $validated['email'] ?? null,
@@ -163,7 +162,6 @@ class LeadWebhookController extends Controller
             'stage' => $validated['stage'] ?? $defaultStage,
             'status' => $validated['status'] ?? $defaultStatus,
             'source' => $validated['source'] ?? 'Google',
-            'assigned_to' => $validated['assigned_to'] ?? null,
             'address' => $validated['address'] ?? null,
             'city' => $validated['city'] ?? null,
             'state' => $validated['state'] ?? null,
@@ -206,6 +204,7 @@ class LeadWebhookController extends Controller
                 'stage' => $lead->stage,
                 'source' => $lead->source,
                 'priority' => $lead->priority,
+                'assigned_to' => $lead->assigned_to,
                 'created_at' => $lead->created_at->toIso8601String(),
             ],
         ];

@@ -1,8 +1,93 @@
 <?php
 
+use App\Models\Attendance;
 use App\Models\Company;
 use App\Models\Integration;
 use App\Models\Lead;
+use App\Models\User;
+use Carbon\CarbonImmutable;
+
+/** @return array{0: Company, 1: array<string, string>} */
+function webhookAssignmentCompany(): array
+{
+    $company = Company::factory()->create();
+    $token = 'assignment-test-token';
+    Integration::create([
+        'company_id' => $company->id, 'name' => 'Webhook', 'type' => 'webhook',
+        'api_key' => hash('sha256', $token), 'status' => true,
+    ]);
+
+    return [$company, ['Authorization' => 'Bearer '.$token]];
+}
+
+test('webhook leads are evenly distributed in random rounds among present staff including breaks', function () {
+    [$company, $headers] = webhookAssignmentCompany();
+    $staff = User::factory()->count(3)->for($company)->create(['user_type' => 'staff']);
+    foreach ($staff as $index => $user) {
+        Attendance::factory()->for($user)->create([
+            'company_id' => $company->id,
+            'break_in' => $index === 0 ? now() : null,
+        ]);
+    }
+    $round = [];
+    for ($index = 0; $index < 12; $index++) {
+        $response = $this->postJson(route('webhook.v1.lead.create'), ['name' => 'Incoming '.$index], $headers)->assertCreated();
+        $round[] = $response->json('data.assigned_to');
+        $counts = Lead::where('company_id', $company->id)->select('assigned_to')->selectRaw('COUNT(*) as total')->groupBy('assigned_to')->pluck('total', 'assigned_to');
+        $totals = $staff->map(fn (User $user): int => (int) ($counts[$user->id] ?? 0));
+        expect($totals->max() - $totals->min())->toBeLessThanOrEqual(1);
+        if (count($round) === 3) {
+            expect($round)->toHaveCount(3)->and(array_unique($round))->toHaveCount(3);
+            $round = [];
+        }
+    }
+    expect($totals->all())->toBe([4, 4, 4]);
+});
+
+test('webhook ignores supplied assignees and excludes absent inactive owners and other companies', function () {
+    [$company, $headers] = webhookAssignmentCompany();
+    $present = User::factory()->for($company)->create(['user_type' => 'staff']);
+    $absent = User::factory()->for($company)->create(['user_type' => 'staff']);
+    $inactive = User::factory()->for($company)->create(['user_type' => 'staff', 'is_active' => false]);
+    $owner = User::factory()->for($company)->create(['user_type' => 'owner']);
+    foreach ([$present, $inactive, $owner] as $user) {
+        Attendance::factory()->for($user)->create(['company_id' => $company->id]);
+    }
+    $foreign = Attendance::factory()->create();
+    foreach ([$absent->id, $foreign->user_id, 999999] as $suppliedId) {
+        $this->postJson(route('webhook.v1.lead.create'), ['name' => 'Automatic assignment', 'assigned_to' => $suppliedId], $headers)
+            ->assertCreated()->assertJsonPath('data.assigned_to', $present->id);
+    }
+    Attendance::where('user_id', $present->id)->update(['punch_out' => now()]);
+    $this->postJson(route('webhook.v1.lead.create'), ['name' => 'Nobody present', 'assigned_to' => $present->id], $headers)
+        ->assertCreated()->assertJsonPath('data.assigned_to', null);
+});
+
+test('webhook balances todays workload using the attendance timezone and excludes stale punches', function () {
+    config(['attendance.timezone' => 'Asia/Kolkata']);
+    $this->travelTo(CarbonImmutable::parse('2026-09-25 19:00:00', 'UTC'));
+    [$company, $headers] = webhookAssignmentCompany();
+    $busy = User::factory()->for($company)->create(['user_type' => 'staff']);
+    $available = User::factory()->for($company)->create(['user_type' => 'staff']);
+    $stale = User::factory()->for($company)->create(['user_type' => 'staff']);
+    foreach ([$busy, $available] as $user) {
+        Attendance::factory()->for($user)->create(['company_id' => $company->id]);
+    }
+    Attendance::factory()->for($stale)->create(['company_id' => $company->id, 'date' => '2026-09-25', 'punch_in' => now()->subDay()]);
+    Lead::factory()->count(2)->for($company)->create(['assigned_to' => $busy->id]);
+    Lead::factory()->count(5)->for($company)->create(['assigned_to' => $available->id, 'created_at' => now()->subDay()]);
+    for ($index = 0; $index < 2; $index++) {
+        $this->postJson(route('webhook.v1.lead.create'), ['name' => 'Balance '.$index], $headers)
+            ->assertCreated()->assertJsonPath('data.assigned_to', $available->id);
+    }
+});
+
+test('webhook leaves lead unassigned when there is no attendance', function () {
+    [$company, $headers] = webhookAssignmentCompany();
+    User::factory()->for($company)->create(['user_type' => 'staff']);
+    $this->postJson(route('webhook.v1.lead.create'), ['name' => 'Unassigned lead'], $headers)
+        ->assertCreated()->assertJsonPath('data.assigned_to', null);
+});
 
 test('webhook lead creation fails when token is missing', function () {
     $response = $this->postJson(route('webhook.v1.lead.create'), [
@@ -95,12 +180,12 @@ test('webhook lead creation creates lead successfully with valid token in bearer
         'source' => 'Website Webhook',
     ]);
 
-    $this->assertDatabaseHas('webhook_logs', [
+    $this->assertDatabaseHas('lead_activities', [
         'company_id' => $company->id,
-        'integration_id' => $integration->id,
-        'event' => 'lead.create',
-        'status_code' => 201,
-        'status' => 'success',
+        'lead_id' => $response->json('data.id'),
+        'activity_type' => 'notes',
+        'subject' => 'Lead created via Webhook API',
+        'status' => 'completed',
     ]);
 });
 
