@@ -3,7 +3,10 @@
 use App\Models\Company;
 use App\Models\Lead;
 use App\Models\LeadActivity;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
+use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 uses(RefreshDatabase::class);
@@ -15,8 +18,8 @@ uses(RefreshDatabase::class);
  */
 function calendarTestUser(): array
 {
-    $company = Company::create(['name' => 'Calendar Corp', 'slug' => 'calendar-corp']);
-    $user = User::factory()->for($company)->create(['is_active' => true]);
+    $company = Company::create(['name' => 'Calendar Corp', 'slug' => 'calendar-corp', 'onboarding_completed_at' => now()]);
+    $user = User::factory()->for($company)->create(['is_active' => true, 'user_type' => 'owner']);
 
     return [$company, $user];
 }
@@ -108,6 +111,27 @@ test('calendar events includes followup activities with correct shape', function
         ->assertJsonFragment(['leadStatus' => 'Open', 'leadStage' => 'New', 'leadSource' => 'Direct']);
 });
 
+test('calendar events preserve scheduled wall clock times without a timezone conversion', function (string $activityType, string $time) {
+    [$company, $user] = calendarTestUser();
+    $lead = calendarTestLead($company, $user);
+
+    LeadActivity::create([
+        'company_id' => $company->id,
+        'lead_id' => $lead->id,
+        'user_id' => $user->id,
+        'activity_type' => $activityType,
+        'scheduled_at' => '2026-09-25 '.$time,
+        'status' => 'pending',
+    ]);
+
+    $this->actingAs($user)
+        ->getJson(route('calendar.events', ['start' => '2026-09-25', 'end' => '2026-09-26']))
+        ->assertSuccessful()
+        ->assertJsonCount(1)
+        ->assertJsonPath('0.start', '2026-09-25T'.$time)
+        ->assertJsonPath('0.extendedProps.scheduledAt', '2026-09-25T'.$time);
+})->with(['followup', 'visit', 'gmeet'])->with(['10:00:00', '23:30:00']);
+
 test('calendar events includes visit and gmeet activity types', function () {
     [$company, $user] = calendarTestUser();
     $lead = calendarTestLead($company, $user, 'Site Client');
@@ -134,6 +158,58 @@ test('calendar events includes visit and gmeet activity types', function () {
         ->assertJsonCount(2)
         ->assertJsonFragment(['activityType' => 'visit'])
         ->assertJsonFragment(['activityType' => 'gmeet']);
+});
+
+test('today event feed includes assignees and actions and excludes other days and companies', function () {
+    [$company, $user] = calendarTestUser();
+    $lead = calendarTestLead($company, $user);
+    $lead->update(['assigned_to' => $user->id]);
+    $today = now()->startOfDay();
+
+    foreach ([$today->copy()->subDay(), $today->copy()->setTime(10, 0), $today->copy()->setTime(23, 59, 59), $today->copy()->addDay()] as $scheduledAt) {
+        LeadActivity::create([
+            'company_id' => $company->id, 'lead_id' => $lead->id,
+            'activity_type' => 'followup', 'subject' => 'Call customer',
+            'scheduled_at' => $scheduledAt, 'status' => 'pending',
+        ]);
+    }
+    $foreignLead = Lead::factory()->create();
+    LeadActivity::create([
+        'company_id' => $foreignLead->company_id, 'lead_id' => $foreignLead->id,
+        'activity_type' => 'visit', 'scheduled_at' => $today, 'status' => 'pending',
+    ]);
+
+    $this->actingAs($user)->getJson(route('calendar.events', [
+        'start' => $today->format('Y-m-d').' 00:00:00',
+        'end' => $today->format('Y-m-d').' 23:59:59',
+    ]))->assertSuccessful()->assertJsonCount(2)
+        ->assertJsonPath('0.start', $today->format('Y-m-d').'T10:00:00')
+        ->assertJsonPath('0.extendedProps.assignedTo', $user->name)
+        ->assertJsonPath('0.extendedProps.subject', 'Call customer')
+        ->assertJsonPath('0.extendedProps.canEdit', true)
+        ->assertJsonPath('0.extendedProps.canComplete', true);
+});
+
+test('event feed limits staff to assigned leads and reports their activity permissions', function () {
+    [$company, $owner] = calendarTestUser();
+    app(RolePermissionSeeder::class)->seedCompany($company->id);
+    $role = Role::create(['company_id' => $company->id, 'name' => 'Calendar reader', 'slug' => 'calendar-reader', 'status' => true]);
+    $role->permissions()->sync(Permission::where('company_id', $company->id)->where('slug', 'view_own_leads')->pluck('id'));
+    $staff = User::factory()->for($company)->create(['user_type' => 'staff', 'role_id' => $role->id]);
+    $own = calendarTestLead($company, $owner);
+    $own->update(['assigned_to' => $staff->id]);
+    $hidden = calendarTestLead($company, $owner, 'Hidden lead');
+    foreach ([$own, $hidden] as $lead) {
+        LeadActivity::create([
+            'company_id' => $company->id, 'lead_id' => $lead->id,
+            'activity_type' => 'followup', 'scheduled_at' => now(), 'status' => 'pending',
+        ]);
+    }
+    $this->actingAs($staff)->getJson(route('calendar.events'))->assertSuccessful()->assertJsonCount(1)
+        ->assertJsonPath('0.extendedProps.leadId', $own->id)
+        ->assertJsonPath('0.extendedProps.assignedTo', $staff->name)
+        ->assertJsonPath('0.extendedProps.canEdit', false)
+        ->assertJsonPath('0.extendedProps.canComplete', false);
 });
 
 test('calendar events excludes notes and call activity types', function () {

@@ -118,6 +118,13 @@ class User extends Authenticatable // implements MustVerifyEmail
         return $this->role?->slug === $slug;
     }
 
+    public function canViewAllAttendance(): bool
+    {
+        return $this->is_active && $this->company_id && ($this->user_type === 'owner'
+            || ($this->role?->slug === 'admin' && $this->role->status
+                && (int) $this->role->company_id === (int) $this->company_id));
+    }
+
     public function hasPermission(string $permission): bool
     {
         if (! $this->is_active || ! $this->company_id || ! array_key_exists($permission, array_merge(...array_values(Permission::MODULES)))) {

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Attendance;
 use App\Models\Client;
 use App\Models\Lead;
 use App\Models\User;
@@ -44,6 +45,9 @@ class DashboardController extends Controller
             $cards[] = ['label' => 'Staff', 'count' => User::where('company_id', $user->company_id)->where('user_type', 'staff')->count(), 'route' => 'staff-manage', 'hint' => 'Active and inactive staff'];
         }
 
-        return view('dashboard', compact('cards', 'statuses', 'recentLeads', 'conversionRate', 'canViewLeads'));
+        $canPunchAttendance = $user->is_active && $user->company_id && $user->user_type === 'staff';
+        $attendance = $canPunchAttendance ? Attendance::dashboardRecord($user) : null;
+
+        return view('dashboard', compact('cards', 'statuses', 'recentLeads', 'conversionRate', 'canViewLeads', 'canPunchAttendance', 'attendance'));
     }
 }

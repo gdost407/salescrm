@@ -59,10 +59,18 @@ test('dashboard handles empty companies and users without permissions', function
     $company = Company::factory()->create(['onboarding_completed_at' => now()]);
     $owner = User::factory()->for($company)->create(['user_type' => 'owner']);
     $this->actingAs($owner)->get(route('dashboard'))->assertSuccessful()->assertSee('No leads available.')
-        ->assertViewHas('conversionRate', 0);
+        ->assertViewHas('conversionRate', 0)
+        ->assertSee("Today's scheduled events", false)
+        ->assertSee('Assigned to')
+        ->assertSee('Timing')
+        ->assertSee('calendarActivityModal', false)
+        ->assertSee('data-dashboard-event', false)
+        ->assertSee('data-calendar-edit', false)
+        ->assertSee('data-calendar-complete', false);
     $staff = User::factory()->for($company)->create(['user_type' => 'staff', 'role_id' => null]);
     $this->actingAs($staff)->get(route('dashboard'))->assertSuccessful()
-        ->assertViewHas('cards', [])->assertViewHas('canViewLeads', false)->assertSee('No dashboard metrics are available');
+        ->assertViewHas('cards', [])->assertViewHas('canViewLeads', false)->assertSee('No dashboard metrics are available')
+        ->assertDontSee('dashboard-scheduled-events', false);
 });
 
 test('recent leads are limited to the six newest visible records', function () {

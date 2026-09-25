@@ -15,6 +15,7 @@ use App\Http\Controllers\Web\Payment\PaymentController;
 use App\Http\Controllers\Web\Quotation\QuotationController;
 use App\Http\Controllers\Web\Report\ReportController;
 use App\Http\Controllers\Web\Sales\SalesController;
+use App\Http\Controllers\Web\Staff\AttendanceController;
 use App\Http\Controllers\Web\Staff\StaffController;
 use App\Http\Controllers\Web\Tax\TaxController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
@@ -148,6 +149,8 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
 
     // Staff Routes
     Route::prefix('staff')->group(function () {
+        Route::get('attendance', [AttendanceController::class, 'index'])->name('staff.attendance.index');
+        Route::post('attendance/punch', [AttendanceController::class, 'punch'])->name('staff.attendance.punch');
         Route::get('create', [StaffController::class, 'create'])->middleware(EnsurePermission::class.':create_staff')->name('staff-create');
         Route::post('create', [StaffController::class, 'store'])->middleware(EnsurePermission::class.':create_staff')->name('staff.store');
         Route::get('manage', [StaffController::class, 'manage'])->middleware(EnsurePermission::class.':view_staff')->name('staff-manage');

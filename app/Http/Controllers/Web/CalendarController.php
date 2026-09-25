@@ -25,7 +25,8 @@ class CalendarController extends Controller
         $end = $request->query('end');
 
         $activities = LeadActivity::with([
-            'lead:id,name,email,mobile,status,stage,source,assigned_to,address,country,state,city,pincode',
+            'lead:id,company_id,name,email,mobile,status,stage,source,assigned_to,address,country,state,city,pincode',
+            'lead.assignee' => fn ($query) => $query->where('company_id', $user->company_id)->select('id', 'name'),
         ])
             ->where('company_id', $user->company_id)
             ->whereHas('lead', fn ($query) => $query->visibleTo($user))
@@ -36,7 +37,7 @@ class CalendarController extends Controller
             ->orderBy('scheduled_at')
             ->get();
 
-        $events = $activities->map(function (LeadActivity $activity): array {
+        $events = $activities->map(function (LeadActivity $activity) use ($user): array {
             $leadName = $activity->lead?->name ?? 'Unknown Lead';
             $type = $activity->activity_type;
             $followupType = $activity->followup_type;
@@ -63,7 +64,7 @@ class CalendarController extends Controller
             return [
                 'id' => $activity->id,
                 'title' => "{$label} — {$leadName}",
-                'start' => $activity->scheduled_at->toIso8601String(),
+                'start' => $activity->scheduled_at->format('Y-m-d\TH:i:s'),
                 'backgroundColor' => $color,
                 'borderColor' => $color,
                 'textColor' => $textColor,
@@ -71,11 +72,15 @@ class CalendarController extends Controller
                     'activityType' => $type,
                     'followupType' => $followupType,
                     'leadName' => $leadName,
+                    'assignedTo' => $activity->lead?->assignee?->name,
+                    'canEdit' => $user->canAccessLeadActivity($activity->lead, 'edit', $type, $activity),
+                    'canComplete' => $user->canAccessLeadActivity($activity->lead, 'complete', $type, $activity),
+                    'meetingLink' => $activity->metadata['meeting_link'] ?? '',
                     'leadId' => $activity->lead_id,
                     'subject' => $activity->subject,
                     'summary' => $activity->summary,
                     'status' => $activity->status,
-                    'scheduledAt' => $activity->scheduled_at->toIso8601String(),
+                    'scheduledAt' => $activity->scheduled_at->format('Y-m-d\TH:i:s'),
                     'leadEmail' => $activity->lead?->email,
                     'leadMobile' => $activity->lead?->mobile,
                     'leadStatus' => $activity->lead?->status,

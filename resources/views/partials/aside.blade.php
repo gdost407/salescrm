@@ -163,13 +163,16 @@
     <!-- <li class="menu-header small text-uppercase">
       <span class="menu-header-text">Pages</span>
     </li> -->
-    @if (auth()->user()->hasPermission('create_staff') || auth()->user()->hasPermission('view_staff') || auth()->user()->hasPermission('edit_staff'))
+    @if (auth()->user()->hasPermission('create_staff') || auth()->user()->hasPermission('view_staff') || auth()->user()->hasPermission('edit_staff') || (auth()->user()->is_active && auth()->user()->company_id && in_array(auth()->user()->user_type, ['owner', 'staff'])))
     <li class="menu-item {{ request()->routeIs('staff-*', 'staff.*') ? 'active open' : '' }}">
       <a href="javascript:void(0);" class="menu-link menu-toggle">
         <i class="menu-icon tf-icons bx bx-dock-top"></i>
         <div data-i18n="Account Settings">Staff</div>
       </a>
       <ul class="menu-sub">
+        <li class="menu-item {{ request()->routeIs('staff.attendance.*') ? 'active' : '' }}">
+          <a href="{{ route('staff.attendance.index') }}" class="menu-link"><div>Attendance</div></a>
+        </li>
         @if (auth()->user()->hasPermission('create_staff'))
         <li class="menu-item {{ request()->routeIs('staff-create') ? 'active' : '' }}">
           <a href="{{ route('staff-create') }}" class="menu-link">
