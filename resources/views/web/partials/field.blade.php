@@ -35,7 +35,7 @@
             @endforeach
         </select>
     @elseif ($inputType === 'textarea')
-        <textarea class="form-control @error($field) is-invalid @enderror" id="{{ $field }}" name="{{ $field }}" rows="3" @required($required) @error($field) aria-invalid="true" aria-describedby="{{ $field }}-error" @enderror>{{ $value }}</textarea>
+        <textarea class="form-control @error($field) is-invalid @enderror" id="{{ $field }}" name="{{ $field }}" rows="1" @required($required) @error($field) aria-invalid="true" aria-describedby="{{ $field }}-error" @enderror>{{ $value }}</textarea>
     @else
         <input class="form-control @error($field) is-invalid @enderror" type="{{ $inputType }}" id="{{ $field }}" name="{{ $field }}" value="{{ $value }}" @required($required) @error($field) aria-invalid="true" aria-describedby="{{ $field }}-error" @enderror @if($inputType === 'number') step="{{ $step ?? '0.01' }}" min="0" @endif>
     @endif

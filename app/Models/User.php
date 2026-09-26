@@ -196,6 +196,19 @@ class User extends Authenticatable // implements MustVerifyEmail
             || ((int) $lead->assigned_to === (int) $this->id && $this->hasPermission($action.'_own_leads'));
     }
 
+    public function roleLabel(): string
+    {
+        if ($this->user_type === 'owner') {
+            return 'Owner';
+        }
+
+        $role = $this->role;
+
+        return $role && (int) $role->company_id === (int) $this->company_id
+            ? $role->name
+            : 'Staff';
+    }
+
     /**
      * Get the user's initials
      */

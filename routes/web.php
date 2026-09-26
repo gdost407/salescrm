@@ -12,6 +12,7 @@ use App\Http\Controllers\Web\Item\ItemController;
 use App\Http\Controllers\Web\Job\JobController;
 use App\Http\Controllers\Web\Ledger\LedgerController;
 use App\Http\Controllers\Web\Payment\PaymentController;
+use App\Http\Controllers\Web\ProfileController;
 use App\Http\Controllers\Web\Quotation\QuotationController;
 use App\Http\Controllers\Web\Report\ReportController;
 use App\Http\Controllers\Web\Sales\SalesController;
@@ -41,6 +42,11 @@ Route::get('dashboard', [DashboardController::class, 'index'])
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::get('settings/profile', [ProfileController::class, 'edit'])->name('settings.profile');
+    Route::put('settings/profile', [ProfileController::class, 'update'])->name('settings.profile.update');
+    Route::get('settings/profile/photo', [ProfileController::class, 'photo'])->name('settings.profile.photo');
+    Route::put('settings/password', [ProfileController::class, 'password'])->middleware('throttle:6,1')->name('settings.password.update');
+    Route::get('settings/password', fn () => redirect()->to(route('settings.profile').'#change-password'))->name('settings.password');
     Route::get('notifications/unread', [NotificationController::class, 'unread'])->name('notifications.unread');
     Route::patch('notifications/{notification}/read', [NotificationController::class, 'markRead'])->name('notifications.read');
     Route::get('locations/countries', [SalesController::class, 'locationCountries'])->name('locations.countries');
@@ -175,8 +181,6 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
 
     // Settings Routes
     Route::redirect('settings', 'settings/profile');
-    Volt::route('settings/profile', 'settings.profile')->name('settings.profile');
-    Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
 });
 

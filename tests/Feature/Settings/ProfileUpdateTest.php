@@ -9,8 +9,9 @@ test('profile page is displayed', function () {
     $this->get('/settings/profile')->assertOk();
 });
 
-test('profile information can be updated', function () {
+test('legacy profile updates name without changing email', function () {
     $user = User::factory()->create();
+    $email = $user->email;
 
     $this->actingAs($user);
 
@@ -24,8 +25,8 @@ test('profile information can be updated', function () {
     $user->refresh();
 
     expect($user->name)->toEqual('Test User');
-    expect($user->email)->toEqual('test@example.com');
-    expect($user->email_verified_at)->toBeNull();
+    expect($user->email)->toEqual($email);
+    expect($user->email_verified_at)->not->toBeNull();
 });
 
 test('email verification status is unchanged when email address is unchanged', function () {

@@ -2,25 +2,13 @@
   <div class="container-xxl d-flex flex-wrap justify-content-between py-2 flex-md-row flex-column">
     <div class="mb-2 mb-md-0">
       © {{ date('Y') }}, made with ❤️ by
-      <a href="https://themeselection.com" target="_blank" class="footer-link fw-bolder">ThemeSelection</a>
+      <a href="https://aniketgolhar.in" target="_blank" class="footer-link fw-bolder">AniketG4</a>
     </div>
     <div>
-      <a href="https://themeselection.com/license/" class="footer-link me-4" target="_blank">License</a>
-      <a href="https://themeselection.com/" target="_blank" class="footer-link me-4">More Themes</a>
-
-      <a
-        href="https://themeselection.com/demo/sneat-bootstrap-html-admin-template/documentation/"
-        target="_blank"
-        class="footer-link me-4"
-        >Documentation</a
-      >
-
-      <a
-        href="https://github.com/themeselection/sneat-html-admin-template-free/issues"
-        target="_blank"
-        class="footer-link me-4"
-        >Support</a
-      >
+      <a href="https://asg.aniketgolhar.in/" target="_blank" class="footer-link me-4">ASG</a>
+      <a href="http://kitcat.aniketgolhar.in/" target="_blank" class="footer-link me-4">KitCat</a>
+      <a href="https://submitter.aniketgolhar.in/" target="_blank" class="footer-link me-4">Submitter</a>
+      <a href="https://info.aniketgolhar.in/" target="_blank" class="footer-link me-4">Info</a>
     </div>
   </div>
 </footer>
