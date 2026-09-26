@@ -16,6 +16,8 @@ use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\MessageBag;
+use Illuminate\Support\ViewErrorBag;
 
 beforeEach(function () {
     $this->withoutMiddleware(ValidateCsrfToken::class);
@@ -23,6 +25,37 @@ beforeEach(function () {
     $this->owner = User::factory()->for($this->company)->create(['user_type' => 'owner']);
     $this->client = Client::factory()->for($this->company)->create();
     $this->actingAs($this->owner);
+});
+
+test('client forms render labelled icons required fields and preserve submitted values', function () {
+    foreach (['create', 'edit'] as $page) {
+        $response = $this->get(route('clients.'.$page, $page === 'edit' ? $this->client : []));
+        $response->assertSuccessful()->assertSee('Red icons indicate required fields.');
+        $document = new DOMDocument;
+        @$document->loadHTML($response->getContent());
+        $xpath = new DOMXPath($document);
+
+        foreach (['name', 'type', 'is_active'] as $field) {
+            expect($xpath->query('//*[@id="'.$field.'" and @required]')->length)->toBe(1);
+            expect($xpath->query('//*[@id="'.$field.'"]/../span[contains(@class,"text-danger")]')->length)->toBe(1);
+            expect($xpath->query('//label[@for="'.$field.'"]')->length)->toBe(1);
+        }
+
+        expect($xpath->query('//*[@id="email" and @type="email" and not(@required)]')->length)->toBe(1);
+        expect($xpath->query('//*[@id="email"]/../span/i[contains(@class,"bx-envelope")]')->length)->toBe(1);
+        expect($xpath->query('//*[@id="email"]/../span[contains(@class,"text-danger")]')->length)->toBe(0);
+        if ($page === 'edit') {
+            expect($document->getElementById('name')->getAttribute('value'))->toBe($this->client->name);
+        }
+    }
+
+    $this->withSession(['_old_input' => ['name' => 'Retained client']])
+        ->get(route('clients.create'))->assertSee('value="Retained client"', false);
+    $html = view('web.partials.field', [
+        'field' => 'email', 'label' => 'Email', 'record' => $this->client,
+        'errors' => (new ViewErrorBag)->put('default', new MessageBag(['email' => 'Enter a valid email address.'])),
+    ])->render();
+    expect($html)->toContain('invalid-feedback d-block', 'email-error', 'Enter a valid email address.');
 });
 
 test('client and tax masters support validated CRUD', function (string $resource, string $model, array $data) {
