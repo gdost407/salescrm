@@ -61,6 +61,14 @@
               <span class="align-middle">Change Password</span>
             </a>
           </li>
+          @if (auth()->user()->is_active && auth()->user()->user_type === 'owner' && auth()->user()->company_id)
+          <li>
+            <a class="dropdown-item" href="{{ route('subscription.index') }}">
+              <i class="bx bx-credit-card me-2"></i>
+              <span class="align-middle">Subscription &amp; Billing</span>
+            </a>
+          </li>
+          @endif
 
           <li>
             <div class="dropdown-divider"></div>

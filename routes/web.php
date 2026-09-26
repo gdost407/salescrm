@@ -18,6 +18,7 @@ use App\Http\Controllers\Web\Report\ReportController;
 use App\Http\Controllers\Web\Sales\SalesController;
 use App\Http\Controllers\Web\Staff\AttendanceController;
 use App\Http\Controllers\Web\Staff\StaffController;
+use App\Http\Controllers\Web\SubscriptionController;
 use App\Http\Controllers\Web\Tax\TaxController;
 use App\Http\Middleware\AuthenticateWebhookApiToken;
 use App\Http\Middleware\EnsureCompanyOnboardingComplete;
@@ -56,6 +57,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])->group(function () {
+    Route::get('subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
     Route::get('reports/{type}', [ReportController::class, 'index'])
         ->whereIn('type', array_keys(SalesReport::MODULES))->name('reports.index');
     Route::get('reports/{type}/export', [ReportController::class, 'export'])
