@@ -74,7 +74,7 @@ class Attendance extends Model
     {
         return self::query()->where('company_id', $user->company_id)->where('user_id', $user->id)
             ->where(function (Builder $query): void {
-                $query->whereNull('punch_out')->orWhere('date', now(config('attendance.timezone'))->toDateString());
+                $query->whereNull('punch_out')->orWhere('date', now()->toDateString());
             })->orderByRaw('punch_out IS NOT NULL')->latest('date')->first();
     }
 }

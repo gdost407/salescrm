@@ -93,7 +93,7 @@
         const dateKey = (date) => [date.getFullYear(), String(date.getMonth() + 1).padStart(2, '0'), String(date.getDate()).padStart(2, '0')].join('-');
         const visibleEventsForDate = (date) => state.events.filter((event) => event.start.slice(0, 10) === dateKey(date));
         const loadEvents = async () => {
-            const today = dateKey(new Date());
+            const today = @json(now()->toDateString());
             const query = new URLSearchParams({ start: `${today} 00:00:00`, end: `${today} 23:59:59` });
             try {
                 const response = await fetch(`{{ route('calendar.events') }}?${query}`, { headers: { Accept: 'application/json' } });

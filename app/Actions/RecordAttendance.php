@@ -15,7 +15,7 @@ class RecordAttendance
             $staff = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
             abort_unless($staff->is_active && $staff->company_id && $staff->user_type === 'staff', 403);
             $now = now()->startOfSecond();
-            $date = $now->copy()->setTimezone(config('attendance.timezone'))->toDateString();
+            $date = $now->copy()->toDateString();
             $query = Attendance::where('company_id', $staff->company_id)->where('user_id', $staff->id);
             $attendance = (clone $query)->whereNull('punch_out')->lockForUpdate()->first();
 

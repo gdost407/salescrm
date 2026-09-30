@@ -678,7 +678,7 @@
         const miniTitle = document.querySelector('[data-calendar-mini-title]');
         const monthFormatter = new Intl.DateTimeFormat(undefined, { month: 'long', year: 'numeric' });
         const timeFormatter = new Intl.DateTimeFormat(undefined, { hour: 'numeric', minute: '2-digit' });
-        const today = new Date();
+        const today = new Date(@json(now()->format('Y-m-d\TH:i:s')));
         const state = {
             month: new Date(today.getFullYear(), today.getMonth(), 1),
             events: [],

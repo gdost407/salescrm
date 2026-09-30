@@ -2,6 +2,11 @@
 
 return [
 
+    'upi' => [
+        'id' => env('UPI_ID'),
+        'payee_name' => env('UPI_PAYEE_NAME'),
+    ],
+
     'razorpay' => [
         'key_id' => env('RAZORPAY_KEY_ID'),
         'key_secret' => env('RAZORPAY_KEY_SECRET'),

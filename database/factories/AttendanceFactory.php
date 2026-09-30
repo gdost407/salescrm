@@ -22,7 +22,7 @@ class AttendanceFactory extends Factory
         return [
             'user_id' => User::factory()->for(Company::factory())->state(['user_type' => 'staff']),
             'company_id' => fn (array $attributes) => User::findOrFail($attributes['user_id'])->company_id,
-            'date' => now(config('attendance.timezone'))->toDateString(),
+            'date' => now()->toDateString(),
             'punch_in' => now(),
         ];
     }

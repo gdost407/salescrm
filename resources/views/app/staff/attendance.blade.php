@@ -2,7 +2,7 @@
 @section('content')
 <div class="container-xxl flex-grow-1 container-p-y">
     <h4>Attendance</h4>
-    <p class="text-muted">{{ $canViewAll ? 'Company staff attendance' : 'My attendance' }} &middot; {{ config('attendance.timezone') }}</p>
+    <p class="text-muted">{{ $canViewAll ? 'Company staff attendance' : 'My attendance' }} &middot; {{ config('app.timezone') }}</p>
     @if($errors->any())
         <div class="alert alert-danger">{{ $errors->first() }}</div>
     @endif
@@ -27,7 +27,7 @@
                 <tr>
                     @foreach($week as $day)
                     @if($day)
-                        <td class="align-top p-3 {{ $day['date']->toDateString() === now(config('attendance.timezone'))->toDateString() ? 'table-primary' : '' }}">
+                        <td class="align-top p-3 {{ $day['date']->toDateString() === now()->toDateString() ? 'table-primary' : '' }}">
                             <a class="d-block" href="{{ route('staff.attendance.index', array_merge(request()->only('staff_id', 'status'), ['month' => $month->format('Y-m'), 'view' => 'calendar', 'date' => $day['date']->toDateString()])) }}">{{ $day['date']->day }}<small class="d-block text-nowrap">{{ $day['count'] }} {{ $day['count'] === 1 ? 'record' : 'records' }}</small></a>
                         </td>
                     @else
@@ -49,7 +49,7 @@
                 <tr>
                     <td class="text-nowrap">{{ $record->date->format('d M Y') }}</td><td>{{ $record->user?->name ?? 'Deleted staff' }}</td>
                     @foreach(['punch_in', 'punch_out', 'break_in', 'break_out'] as $field)
-                        <td class="text-nowrap">{{ $record->$field?->setTimezone(config('attendance.timezone'))->format('d M, h:i A') ?? '—' }}</td>
+                        <td class="text-nowrap">{{ $record->$field?->format('d M, h:i A') ?? '—' }}</td>
                     @endforeach
                     <td>{{ $record->workingHours() }} <small class="text-muted">HH:MM</small></td><td><span class="badge bg-label-primary">{{ $record->status() }}</span></td>
                 </tr>

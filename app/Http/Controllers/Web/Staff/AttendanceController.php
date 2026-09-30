@@ -28,7 +28,7 @@ class AttendanceController extends Controller
             'status' => ['nullable', Rule::in(['working', 'break', 'completed'])],
         ]);
         abort_if(! $canViewAll && $request->filled('staff_id') && (int) $filters['staff_id'] !== $user->id, 403);
-        $month = CarbonImmutable::createFromFormat('!Y-m', $filters['month'] ?? now(config('attendance.timezone'))->format('Y-m'));
+        $month = CarbonImmutable::createFromFormat('!Y-m', $filters['month'] ?? now()->format('Y-m'));
         $view = $filters['view'] ?? 'table';
         $query = Attendance::visibleTo($user)->with('user:id,name')
             ->whereBetween('date', [$month->toDateString(), $month->endOfMonth()->toDateString()])

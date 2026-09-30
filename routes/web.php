@@ -58,6 +58,10 @@ Route::middleware('auth')->group(function () {
 
 Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])->group(function () {
     Route::get('subscription', [SubscriptionController::class, 'index'])->name('subscription.index');
+    Route::get('subscription/checkout/{plan}', [SubscriptionController::class, 'checkout'])->name('subscription.checkout');
+    Route::post('subscription/checkout/{plan}', [SubscriptionController::class, 'submit'])->middleware(['signed', 'throttle:10,1'])->name('subscription.submit');
+    Route::get('subscription/payments/{payment}/success', [SubscriptionController::class, 'success'])->name('subscription.success');
+    Route::get('subscription/payments/{payment}/screenshot', [SubscriptionController::class, 'screenshot'])->name('subscription.screenshot');
     Route::get('reports/{type}', [ReportController::class, 'index'])
         ->whereIn('type', array_keys(SalesReport::MODULES))->name('reports.index');
     Route::get('reports/{type}/export', [ReportController::class, 'export'])

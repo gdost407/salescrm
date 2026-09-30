@@ -4,15 +4,15 @@
             <h5 class="mb-0">My attendance</h5>
             <a href="{{ route('staff.attendance.index') }}">View attendance</a>
         </div>
-        <p class="text-muted">{{ $attendance?->date->format('d M Y') ?? now(config('attendance.timezone'))->format('d M Y') }} &middot; {{ config('attendance.timezone') }} &middot; {{ $attendance?->status() ?? 'Not punched in' }}</p>
+        <p class="text-muted">{{ $attendance?->date->format('d M Y') ?? now()->format('d M Y') }} &middot; {{ config('app.timezone') }} &middot; {{ $attendance?->status() ?? 'Not punched in' }}</p>
         <div class="d-flex flex-wrap gap-4 mb-3">
-            <span>Punch in: <strong>{{ $attendance?->punch_in?->setTimezone(config('attendance.timezone'))->format('h:i A') ?? '—' }}</strong></span>
-            <span>Punch out: <strong>{{ $attendance?->punch_out?->setTimezone(config('attendance.timezone'))->format('h:i A') ?? '—' }}</strong></span>
-            <span>Break start: <strong>{{ $attendance?->break_in?->setTimezone(config('attendance.timezone'))->format('h:i A') ?? '—' }}</strong></span>
-            <span>Break end: <strong>{{ $attendance?->break_out?->setTimezone(config('attendance.timezone'))->format('h:i A') ?? '—' }}</strong></span>
+            <span>Punch in: <strong>{{ $attendance?->punch_in?->format('h:i A') ?? '—' }}</strong></span>
+            <span>Punch out: <strong>{{ $attendance?->punch_out?->format('h:i A') ?? '—' }}</strong></span>
+            <span>Break start: <strong>{{ $attendance?->break_in?->format('h:i A') ?? '—' }}</strong></span>
+            <span>Break end: <strong>{{ $attendance?->break_out?->format('h:i A') ?? '—' }}</strong></span>
             <span>Working hours: <strong>{{ $attendance?->workingHours() ?? '00:00' }}</strong> (HH:MM)</span>
         </div>
-        @if($attendance && ! $attendance->punch_out && $attendance->date->toDateString() !== now(config('attendance.timezone'))->toDateString())
+        @if($attendance && ! $attendance->punch_out && $attendance->date->toDateString() !== now()->toDateString())
             <p class="text-warning">Your earlier shift is still open. Finish it before starting today's attendance.</p>
         @endif
         <div class="alert alert-danger d-none" id="attendance-error" role="alert"></div>

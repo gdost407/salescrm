@@ -70,7 +70,7 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <button type="button" class="btn btn-outline-primary w-100 mt-auto" disabled>Checkout coming soon</button>
+                        <a href="{{ route('subscription.checkout', ['plan' => $plan, 'cycle' => 'monthly']) }}" data-checkout-url="{{ route('subscription.checkout', $plan) }}" class="btn btn-outline-primary w-100 mt-auto plan-checkout">Choose plan<i class="bx bx-right-arrow-alt ms-2" aria-hidden="true"></i></a>
                     </div>
                 </div>
             </div>
@@ -90,7 +90,7 @@
                             <td class="text-nowrap">{{ ($payment->paid_at ?? $payment->created_at)->format('d M Y') }}</td>
                             <td>{{ $payment->plan?->name }}</td>
                             <td class="text-nowrap">{{ $payment->currency }} {{ $payment->amount }}</td>
-                            <td><span class="badge {{ $payment->status === 'paid' ? 'bg-label-success' : ($payment->status === 'failed' ? 'bg-label-danger' : 'bg-label-secondary') }}">{{ ucfirst($payment->status) }}</span></td>
+                            <td><span class="badge {{ $payment->status === 'paid' ? 'bg-label-success' : ($payment->status === 'failed' ? 'bg-label-danger' : 'bg-label-secondary') }}">{{ ucfirst(str_replace('_', ' ', $payment->status)) }}</span></td>
                             <td>{{ $payment->transaction_id ?? $payment->payment_order_id ?? '—' }}</td>
                         </tr>
                     @empty
@@ -113,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         $(this).addClass('btn-primary').removeClass('btn-outline-primary').attr('aria-pressed', 'true');
         $('.plan-price').each(function () { $(this).text(this.dataset[cycle]); });
         $('.plan-period').text(cycle === 'yearly' ? '/ year' : '/ month');
+        $('.plan-checkout').each(function () { this.href = this.dataset.checkoutUrl + '?cycle=' + cycle; });
     });
 });
 </script>

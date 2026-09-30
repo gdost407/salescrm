@@ -63,8 +63,7 @@ test('webhook ignores supplied assignees and excludes absent inactive owners and
         ->assertCreated()->assertJsonPath('data.assigned_to', null);
 });
 
-test('webhook balances todays workload using the attendance timezone and excludes stale punches', function () {
-    config(['attendance.timezone' => 'Asia/Kolkata']);
+test('webhook balances todays workload using India time and excludes stale punches', function () {
     $this->travelTo(CarbonImmutable::parse('2026-09-25 19:00:00', 'UTC'));
     [$company, $headers] = webhookAssignmentCompany();
     $busy = User::factory()->for($company)->create(['user_type' => 'staff']);

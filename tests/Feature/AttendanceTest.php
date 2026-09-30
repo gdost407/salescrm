@@ -7,7 +7,6 @@ use App\Models\User;
 use Carbon\CarbonImmutable;
 
 beforeEach(function () {
-    config(['attendance.timezone' => 'Asia/Kolkata']);
     $this->travelTo(CarbonImmutable::parse('2026-09-25 04:30:00', 'UTC'));
     $this->company = Company::factory()->create(['onboarding_completed_at' => now()]);
     $this->staff = User::factory()->for($this->company)->create(['user_type' => 'staff']);
@@ -21,7 +20,11 @@ test('staff can record one shift and one break with server calculated hours', fu
     ])->assertSuccessful();
     $record = Attendance::sole();
     expect($record->user_id)->toBe($this->staff->id)->and($record->company_id)->toBe($this->company->id)
-        ->and($record->punch_in->format('H:i'))->toBe('04:30');
+        ->and($record->punch_in->format('H:i'))->toBe('10:00')
+        ->and($record->getRawOriginal('punch_in'))->toBe('2026-09-25 10:00:00')
+        ->and($record->getRawOriginal('created_at'))->toBe('2026-09-25 10:00:00')
+        ->and(config('app.timezone'))->toBe('Asia/Kolkata')
+        ->and(date_default_timezone_get())->toBe('Asia/Kolkata');
     $this->postJson(route('staff.attendance.punch'), ['action' => 'punch_in'])->assertUnprocessable();
     $this->travel(3)->hours();
     $this->postJson(route('staff.attendance.punch'), ['action' => 'break_in'])->assertSuccessful();
@@ -63,6 +66,15 @@ test('attendance uses the local day and allows completing an overnight shift', f
     expect(Attendance::sole()->date->toDateString())->toBe('2026-09-25')->and(Attendance::sole()->working_seconds)->toBe(7200);
     $this->postJson(route('staff.attendance.punch'), ['action' => 'punch_in'])->assertSuccessful();
     expect(Attendance::latest('id')->first()->date->toDateString())->toBe('2026-09-26');
+});
+
+test('calendar and dashboard use the India server day after midnight', function () {
+    $this->travelTo(CarbonImmutable::parse('2026-09-25 19:00:00', 'UTC'));
+
+    $this->actingAs($this->owner)->get(route('dashboard'))->assertSuccessful()
+        ->assertSee('const today = "2026-09-26";', false);
+    $this->get(route('calendar'))->assertSuccessful()
+        ->assertSee('const today = new Date("2026-09-26T00:30:00");', false);
 });
 
 test('dashboard punching is staff only and shows local time', function () {
