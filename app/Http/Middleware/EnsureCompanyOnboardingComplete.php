@@ -16,6 +16,10 @@ class EnsureCompanyOnboardingComplete
             && $user->company
             && $user->company->onboarding_completed_at === null
             && ! $request->routeIs('company.onboarding')) {
+            if ($request->routeIs('subscription.checkout')) {
+                return redirect()->guest(route('company.onboarding'));
+            }
+
             return redirect()->route('company.onboarding');
         }
 

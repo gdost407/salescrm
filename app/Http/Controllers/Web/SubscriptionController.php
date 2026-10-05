@@ -18,6 +18,15 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class SubscriptionController extends Controller
 {
+    public function home(): View
+    {
+        return view('welcome', [
+            'plans' => SubscriptionPlan::query()->where('is_active', true)
+                ->with(['features' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')])
+                ->orderBy('sort_order')->get(),
+        ]);
+    }
+
     public function checkout(Request $request, SubscriptionPlan $plan): View
     {
         $user = $request->user();

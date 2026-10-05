@@ -54,7 +54,7 @@ new #[Layout('components.layouts.app')] class extends Component {
             'onboarding_completed_at' => now(),
         ]);
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }
 }; ?>
 

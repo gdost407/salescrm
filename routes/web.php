@@ -34,9 +34,7 @@ Route::post('webhook/v1/lead/create', [LeadWebhookController::class, 'store'])
 Route::post('api/webhook/v1/lead/create', [LeadWebhookController::class, 'store'])
     ->middleware(AuthenticateWebhookApiToken::class);
 
-Route::get('/', function () {
-    return view('welcome');
-})->name('home');
+Route::get('/', [SubscriptionController::class, 'home'])->name('home');
 
 Route::get('dashboard', [DashboardController::class, 'index'])
     ->middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])

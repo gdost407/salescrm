@@ -57,6 +57,7 @@
   <nav class="crm-nav">
     <a class="crm-brand" href="{{ route('home') }}"><span class="crm-mark"><i class="bx bx-line-chart"></i></span><span>{{ config('app.name', 'Sales CRM') }}</span></a>
     <div class="crm-actions">
+      <a class="btn btn-outline-primary btn-sm" href="#plans">Plans</a>
       @auth
         <a class="btn btn-primary btn-sm" href="{{ route('dashboard') }}">Open dashboard <i class="bx bx-right-arrow-alt ms-1"></i></a>
       @else
@@ -103,6 +104,46 @@
       <article class="crm-feature"><i class="bx bx-user-plus"></i><h2>Capture leads quickly</h2><p>Bring in leads from your team, forms, or integrations and give every record a clear owner.</p></article>
       <article class="crm-feature"><i class="bx bx-columns"></i><h2>Move work forward</h2><p>Use the pipeline to see stages, priorities, value, and the next action without digging through pages.</p></article>
       <article class="crm-feature"><i class="bx bx-message-square-detail"></i><h2>Keep the context</h2><p>Log notes, calls, meetings, and follow-ups alongside the lead they belong to.</p></article>
+    </section>
+    <section id="plans" class="container pb-5" aria-labelledby="plans-heading">
+      <div class="text-center mb-4">
+        <span class="badge bg-label-primary mb-3">Plans &amp; pricing</span>
+        <h2 id="plans-heading">A plan for your growing team</h2>
+        <p class="text-body-secondary">Choose your plan and billing cycle. Log in or create an account to continue to checkout.</p>
+      </div>
+      <div class="row g-4">
+        @forelse ($plans as $plan)
+          <div class="col-md-6 col-lg-4">
+            <article class="card h-100">
+              <div class="card-body p-4 d-flex flex-column">
+                <span class="avatar mb-3"><span class="avatar-initial rounded bg-label-primary"><i class="bx bx-group" aria-hidden="true"></i></span></span>
+                <h3 class="h4">{{ $plan->name }}</h3>
+                <p class="text-body-secondary">{{ $plan->description }}</p>
+                <p class="mb-2"><strong class="h3">{{ $plan->currency }} {{ $plan->monthly_price }}</strong><span class="text-body-secondary"> / month</span></p>
+                <p class="text-body-secondary">{{ $plan->currency }} {{ $plan->yearly_price }} / year</p>
+                <p class="fw-semibold">Up to {{ $plan->max_users }} staff members</p>
+                <ul class="list-unstyled border-top pt-3 mb-4">
+                  @foreach ($plan->features as $feature)
+                    <li class="mb-2">
+                      @if ($feature->type === 'boolean' && ! in_array(strtolower((string) $feature->pivot->value), ['1', 'true', 'yes'], true))
+                        <i class="bx bx-minus text-body-secondary me-1" aria-hidden="true"></i>{{ $feature->name }} (not included)
+                      @else
+                        <i class="bx bx-check text-success me-1" aria-hidden="true"></i>{{ $feature->name }}@if ($feature->type !== 'boolean'): {{ $feature->pivot->value }}@endif
+                      @endif
+                    </li>
+                  @endforeach
+                </ul>
+                <div class="d-grid gap-2 mt-auto">
+                  <a class="btn btn-primary" href="{{ route('subscription.checkout', ['plan' => $plan, 'cycle' => 'monthly']) }}" aria-label="Choose {{ $plan->name }} monthly">Choose monthly</a>
+                  <a class="btn btn-outline-primary" href="{{ route('subscription.checkout', ['plan' => $plan, 'cycle' => 'yearly']) }}" aria-label="Choose {{ $plan->name }} yearly">Choose yearly</a>
+                </div>
+              </div>
+            </article>
+          </div>
+        @empty
+          <div class="col-12"><p class="text-center text-body-secondary">Subscription plans will be available soon.</p></div>
+        @endforelse
+      </div>
     </section>
   </main>
   <footer class="crm-footer"><span>{{ config('app.name', 'Sales CRM') }}</span><span>Built for focused sales teams.</span></footer>
