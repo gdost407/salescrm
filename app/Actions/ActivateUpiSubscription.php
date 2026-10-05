@@ -16,15 +16,39 @@ use Throwable;
 
 class ActivateUpiSubscription
 {
-    public function handle(User $user, SubscriptionPlan $plan, string $cycle, string $quotedAmount, string $checkoutId, string $utr, UploadedFile $screenshot): SubscriptionPayment
+    public static function paymentAmount(string $amount, string $currency, string $rate): ?string
+    {
+        if (! preg_match('/^\d{1,8}\.\d{2}$/', $amount) || ! in_array($currency, ['USD', 'INR'], true)) {
+            return null;
+        }
+        $cents = (int) str_replace('.', '', $amount);
+        if ($currency === 'USD') {
+            if (! preg_match('/^\d{1,4}(?:\.\d{1,2})?$/', $rate)) {
+                return null;
+            }
+            $parts = explode('.', $rate);
+            $rateHundredths = (int) $parts[0] * 100 + (int) str_pad($parts[1] ?? '', 2, '0');
+            $rupees = intdiv($cents * $rateHundredths, 10000);
+
+            return $rupees > 0 && $rupees <= 99999999 ? (string) $rupees : null;
+        }
+        if ($cents <= 0 || $cents > 9999999999) {
+            return null;
+        }
+
+        return intdiv($cents, 100).'.'.str_pad((string) ($cents % 100), 2, '0', STR_PAD_LEFT);
+    }
+
+    public function handle(User $user, SubscriptionPlan $plan, string $cycle, string $quotedAmount, string $checkoutId, string $utr, UploadedFile $screenshot, string $quotedCurrency, string $exchangeRate): SubscriptionPayment
     {
         $path = null;
 
         try {
-            return DB::transaction(function () use ($user, $plan, $cycle, $quotedAmount, $checkoutId, $utr, $screenshot, &$path): SubscriptionPayment {
+            return DB::transaction(function () use ($user, $plan, $cycle, $quotedAmount, $checkoutId, $utr, $screenshot, $quotedCurrency, $exchangeRate, &$path): SubscriptionPayment {
                 $company = Company::whereKey($user->company_id)->lockForUpdate()->firstOrFail();
                 $plan = SubscriptionPlan::whereKey($plan->id)->lockForUpdate()->firstOrFail();
-                if (! $plan->is_active || $plan->currency !== 'INR' || ! in_array($cycle, ['monthly', 'yearly'], true)
+                $paymentAmount = self::paymentAmount($quotedAmount, $quotedCurrency, $exchangeRate);
+                if (! $plan->is_active || $plan->currency !== $quotedCurrency || $paymentAmount === null || ! in_array($cycle, ['monthly', 'yearly'], true)
                     || $plan->{$cycle.'_price'} !== $quotedAmount || ! preg_match('/^(?:[1-9]\d*\.\d{2}|0\.(?!00)\d{2})$/', $quotedAmount)) {
                     throw ValidationException::withMessages(['plan' => 'The selected plan or price has changed. Please review the plan before submitting payment.']);
                 }
@@ -54,17 +78,18 @@ class ActivateUpiSubscription
                     ->when($renewing, fn ($query) => $query->whereKeyNot($current->id))
                     ->update(['status' => 'cancelled', 'cancelled_at' => $now, 'ends_at' => $now, 'auto_renew' => false]);
                 $subscription->fill([
-                    'billing_cycle' => $cycle, 'amount' => $quotedAmount, 'currency' => 'INR',
+                    'billing_cycle' => $cycle, 'amount' => $quotedAmount, 'currency' => $quotedCurrency,
                     'status' => 'active', 'ends_at' => $periodEnd, 'cancelled_at' => null,
                     'auto_renew' => false, 'gateway' => 'manual_upi',
                 ])->save();
 
                 return SubscriptionPayment::create([
                     'company_id' => $company->id, 'subscription_id' => $subscription->id, 'plan_id' => $plan->id,
-                    'amount' => $quotedAmount, 'currency' => 'INR', 'gateway' => 'manual_upi',
+                    'amount' => $paymentAmount, 'currency' => 'INR', 'gateway' => 'manual_upi',
                     'transaction_id' => $utr, 'payment_order_id' => $checkoutId, 'payment_method' => 'upi',
                     'status' => 'pending_verification', 'paid_at' => null,
                     'gateway_response' => [
+                        'plan_amount' => $quotedAmount, 'plan_currency' => $quotedCurrency, 'exchange_rate' => $exchangeRate,
                         'screenshot_path' => $path, 'submitted_by' => $user->id, 'submitted_at' => $now->toIso8601String(),
                         'billing_cycle' => $cycle, 'period_starts_at' => $periodStart->toIso8601String(),
                         'period_ends_at' => $periodEnd->toIso8601String(), 'upi_id' => config('services.upi.id'),

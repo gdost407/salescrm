@@ -5,6 +5,27 @@ use App\Models\CompanySubscription;
 use App\Models\SubscriptionPayment;
 use App\Models\SubscriptionPlan;
 use App\Models\User;
+use Database\Seeders\SubscriptionSeeder;
+
+test('seeded subscription plans enable dynamic UPI checkout for both billing cycles', function () {
+    $this->seed(SubscriptionSeeder::class);
+    config(['services.upi.id' => 'merchant@example', 'services.upi.payee_name' => 'OneCRM', 'services.upi.usd_to_inr_rate' => '99.99']);
+    $company = Company::factory()->create(['onboarding_completed_at' => now()]);
+    $this->actingAs(User::factory()->for($company)->create(['user_type' => 'owner']));
+
+    foreach (SubscriptionPlan::where('is_active', true)->get() as $plan) {
+        foreach (['monthly', 'yearly'] as $cycle) {
+            $response = $this->get(route('subscription.checkout', ['plan' => $plan, 'cycle' => $cycle]))
+                ->assertSuccessful()->assertViewHas('checkoutReady', true);
+            parse_str(parse_url($response->viewData('upiUrl'), PHP_URL_QUERY), $parameters);
+            $expectedAmounts = ['10.00' => '999', '100.00' => '9999', '15.00' => '1499', '150.00' => '14998', '20.00' => '1999', '200.00' => '19998'];
+            expect($plan->currency)->toBe('USD')
+                ->and($parameters['cu'])->toBe('INR')
+                ->and($parameters['am'])->toBe($expectedAmounts[$plan->{$cycle.'_price'}])
+                ->and($parameters['pa'])->toBe('merchant@example');
+        }
+    }
+});
 
 test('subscription page shows database prices and only the company payment history', function () {
     $company = Company::factory()->create(['onboarding_completed_at' => now()]);

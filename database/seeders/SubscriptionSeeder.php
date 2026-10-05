@@ -209,11 +209,11 @@ class SubscriptionSeeder extends Seeder
 
             foreach ($features as $featureSlug) {
 
-                if (!isset($planIds[$planSlug])) {
+                if (! isset($planIds[$planSlug])) {
                     continue;
                 }
 
-                if (!isset($featureIds[$featureSlug])) {
+                if (! isset($featureIds[$featureSlug])) {
                     continue;
                 }
 

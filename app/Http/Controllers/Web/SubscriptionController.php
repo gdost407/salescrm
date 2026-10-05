@@ -26,11 +26,13 @@ class SubscriptionController extends Controller
         $validated = $request->validate(['cycle' => ['sometimes', 'required', 'in:monthly,yearly']]);
         $cycle = $validated['cycle'] ?? 'monthly';
         $amount = $plan->{$cycle.'_price'};
-        $ready = $this->upiConfigured() && $plan->currency === 'INR' && preg_match('/^(?:[1-9]\d*\.\d{2}|0\.(?!00)\d{2})$/', $amount);
+        $exchangeRate = $plan->currency === 'INR' ? '1.00' : (string) config('services.upi.usd_to_inr_rate');
+        $paymentAmount = ActivateUpiSubscription::paymentAmount($amount, $plan->currency, $exchangeRate);
+        $ready = $this->upiConfigured() && $paymentAmount !== null;
         $upiUrl = $ready ? 'upi://pay?'.http_build_query([
             'pa' => config('services.upi.id'),
             'pn' => config('services.upi.payee_name'),
-            'am' => $amount,
+            'am' => $paymentAmount,
             'cu' => 'INR',
             'tn' => 'OneCRM '.$plan->name.' Subscription',
         ], '', '&', PHP_QUERY_RFC3986) : null;
@@ -39,12 +41,15 @@ class SubscriptionController extends Controller
             'plan' => $plan,
             'cycle' => $cycle,
             'amount' => $amount,
+            'paymentAmount' => $paymentAmount,
+            'exchangeRate' => $exchangeRate,
             'upiId' => config('services.upi.id'),
             'payeeName' => config('services.upi.payee_name'),
             'upiUrl' => $upiUrl,
             'checkoutReady' => $ready,
             'submitUrl' => $ready ? URL::temporarySignedRoute('subscription.submit', now()->addDay(), [
                 'plan' => $plan->id, 'cycle' => $cycle, 'quote_amount' => $amount,
+                'quote_currency' => $plan->currency, 'exchange_rate' => $exchangeRate,
                 'company' => $user->company_id, 'user' => $user->id, 'checkout' => 'upi_'.Str::uuid(),
             ]) : null,
         ]);
@@ -59,6 +64,7 @@ class SubscriptionController extends Controller
         $payment = $activate->handle(
             $request->user(), $plan, $request->query('cycle'), $request->query('quote_amount'),
             $request->query('checkout'), $request->validated('utr'), $request->file('screenshot'),
+            (string) $request->query('quote_currency'), (string) $request->query('exchange_rate'),
         );
 
         return to_route('subscription.success', $payment)->with('success', 'Your subscription is active. Payment verification is pending.');

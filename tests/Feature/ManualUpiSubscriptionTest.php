@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\ActivateUpiSubscription;
 use App\Models\Company;
 use App\Models\CompanySubscription;
 use App\Models\SubscriptionPayment;
@@ -87,11 +88,11 @@ test('checkout and payment proofs enforce company ownership and owner access', f
     $this->get(route('subscription.checkout', $this->plan))->assertRedirect(route('login'));
 });
 
-test('checkout requires payment configuration and an active positive INR price', function () {
+test('checkout requires payment configuration and a supported positive price', function () {
     config(['services.upi.id' => null]);
     $this->get(route('subscription.checkout', $this->plan))->assertViewHas('checkoutReady', false)->assertViewHas('submitUrl', null);
     config(['services.upi.id' => 'merchant@example']);
-    $this->plan->update(['currency' => 'USD']);
+    $this->plan->update(['currency' => 'EUR']);
     $this->get(route('subscription.checkout', $this->plan))->assertViewHas('checkoutReady', false)->assertSee('UPI pricing is not available');
     $this->plan->update(['currency' => 'INR', 'monthly_price' => '0.00']);
     $this->get(route('subscription.checkout', $this->plan))->assertViewHas('checkoutReady', false);
@@ -146,4 +147,37 @@ test('failed payment persistence rolls back activation and deletes the screensho
     }
     expect(CompanySubscription::count())->toBe(0)->and(SubscriptionPayment::count())->toBe(0);
     expect(Storage::disk('local')->allFiles())->toBeEmpty();
+});
+
+test('USD checkout locks the conversion rate and records the INR payment separately', function () {
+    config(['services.upi.usd_to_inr_rate' => '99.99']);
+    $this->plan->update(['currency' => 'USD', 'monthly_price' => '10.00']);
+    $response = $this->get(route('subscription.checkout', ['plan' => $this->plan, 'amount' => '1', 'exchange_rate' => '1']))
+        ->assertSuccessful()->assertSee('USD 10.00')->assertSee('INR 999</strong>', false)->assertDontSee('INR 999.90')->assertDontSee('Exchange rate:');
+    parse_str(parse_url($response->viewData('upiUrl'), PHP_URL_QUERY), $parameters);
+    expect($parameters['am'])->toBe('999')->and($parameters['cu'])->toBe('INR');
+    $url = $response->viewData('submitUrl');
+    $this->postJson(str_replace('exchange_rate=99.99', 'exchange_rate=1.00', $url), ['utr' => 'USD123456', 'screenshot' => ($this->proof)()])->assertForbidden();
+    config(['services.upi.usd_to_inr_rate' => '105.00']);
+    $this->post($url, ['utr' => 'USD123456', 'screenshot' => ($this->proof)(), 'exchange_rate' => '1'])
+        ->assertSessionHasNoErrors()->assertRedirect();
+    $payment = SubscriptionPayment::sole();
+    expect($payment->amount)->toBe('999.00')->and($payment->currency)->toBe('INR')
+        ->and($payment->gateway_response['exchange_rate'])->toBe('99.99')
+        ->and($payment->subscription->amount)->toBe('10.00')
+        ->and($payment->subscription->currency)->toBe('USD')
+        ->and($payment->subscription->status)->toBe('active')
+        ->and($payment->status)->toBe('pending_verification');
+});
+
+test('conversion uses exact rounding and rejects invalid rates', function () {
+    expect(ActivateUpiSubscription::paymentAmount('0.50', 'USD', '99.99'))->toBe('49')
+        ->and(ActivateUpiSubscription::paymentAmount('10.01', 'USD', '99.99'))->toBe('1000')
+        ->and(ActivateUpiSubscription::paymentAmount('0.01', 'USD', '99.99'))->toBeNull();
+    $this->plan->update(['currency' => 'USD']);
+    foreach (['', '0', '-1', 'invalid', '99999', '99.999'] as $rate) {
+        config(['services.upi.usd_to_inr_rate' => $rate]);
+        $this->get(route('subscription.checkout', $this->plan))
+            ->assertViewHas('checkoutReady', false)->assertViewHas('submitUrl', null);
+    }
 });

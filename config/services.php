@@ -5,6 +5,7 @@ return [
     'upi' => [
         'id' => env('UPI_ID'),
         'payee_name' => env('UPI_PAYEE_NAME'),
+        'usd_to_inr_rate' => env('UPI_USD_TO_INR_RATE', '99.99'),
     ],
 
     'razorpay' => [

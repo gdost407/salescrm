@@ -23,8 +23,11 @@
                         <dt class="col-7 fw-normal text-body-secondary">Duration</dt><dd class="col-5 text-end">{{ $cycle === 'yearly' ? '1 year' : '1 month' }}</dd>
                     </dl>
                     <div class="border-top pt-4">
-                        <p class="text-body-secondary mb-1">Total payable</p>
+                        <p class="text-body-secondary mb-1">Plan price</p>
                         <h3 class="mb-0">{{ $plan->currency }} {{ $amount }}</h3>
+                        @if ($paymentAmount !== null)
+                            <p class="mt-2 mb-0">Total payable: <strong>INR {{ $paymentAmount }}</strong></p>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -33,19 +36,19 @@
             <div class="card mb-4">
                 <div class="card-header"><h5 class="mb-0">1. Payment details</h5></div>
                 <div class="card-body">
-                    @if ($plan->currency !== 'INR')
+                    @if ($paymentAmount === null)
                         <p class="text-body-secondary mb-0">UPI pricing is not available for this plan yet.</p>
                     @elseif ($checkoutReady)
                         <div class="row g-4 align-items-center">
                             <div class="col-sm-5 text-center">
-                                <div id="upi-qr" class="d-inline-block mw-100 rounded border p-4 bg-white" data-upi-url="{{ $upiUrl }}" role="img" aria-label="UPI payment QR code for {{ $plan->name }}, INR {{ $amount }}"></div>
+                                <div id="upi-qr" class="d-inline-block mw-100 rounded border p-4 bg-white" data-upi-url="{{ $upiUrl }}" role="img" aria-label="UPI payment QR code for {{ $plan->name }}, INR {{ $paymentAmount }}"></div>
                                 <p id="upi-qr-error" class="text-danger small mt-2 d-none" role="alert">The QR code could not be generated. Use the UPI ID and exact amount shown to make your payment.</p>
                                 <noscript><p class="text-body-secondary small mt-2">Enable JavaScript to display the QR code, or pay using the UPI ID and amount shown.</p></noscript>
                             </div>
                             <div class="col-sm-7">
                                 <p class="text-body-secondary mb-1">Payee</p><h6>{{ $payeeName }}</h6>
                                 <p class="text-body-secondary mb-1">UPI ID</p><p class="fw-semibold text-break">{{ $upiId }}</p>
-                                <p class="mb-0">Scan the QR code and pay exactly <strong>INR {{ $amount }}</strong>. Keep your transaction reference and screenshot.</p>
+                                <p class="mb-0">Scan the QR code and pay exactly <strong>INR {{ $paymentAmount }}</strong>. Keep your transaction reference and screenshot.</p>
                             </div>
                         </div>
                     @else
