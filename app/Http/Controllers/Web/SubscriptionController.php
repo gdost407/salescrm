@@ -110,11 +110,13 @@ class SubscriptionController extends Controller
     public function index(Request $request): View
     {
         $user = $request->user();
-        abort_unless($user->is_active && $user->user_type === 'owner' && $user->company_id, 403);
+        abort_unless($user->is_active && in_array($user->user_type, ['owner', 'staff'], true) && $user->company_id, 403);
         $company = $user->company;
 
         return view('web.subscription', [
             'company' => $company,
+            'trialActive' => $company->hasActiveTrial(),
+            'trialEndsAt' => $company->trialEndsAt(),
             'plans' => SubscriptionPlan::query()->where('is_active', true)
                 ->with(['features' => fn ($query) => $query->where('is_active', true)->orderBy('sort_order')])
                 ->orderBy('sort_order')->get(),
@@ -123,7 +125,9 @@ class SubscriptionController extends Controller
                 ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
                 ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', now()))
                 ->latest('starts_at')->first(),
-            'payments' => $company->subscriptionPayments()->with('plan')->latest()->paginate(10),
+            'payments' => $company->subscriptionPayments()->with('plan')
+                ->when($user->user_type !== 'owner', fn ($query) => $query->whereRaw('1 = 0'))
+                ->latest()->paginate(10),
             'staffCount' => $company->users()->where('user_type', 'staff')->count(),
         ]);
     }

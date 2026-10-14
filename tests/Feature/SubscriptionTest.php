@@ -42,14 +42,16 @@ test('subscription page shows database prices and only the company payment histo
         ->assertSuccessful()->assertSee('Team Plan')->assertSee('499.99')->assertSee('4999.90')
         ->assertSee('pay_own')->assertDontSee('pay_other_company')->assertDontSee('Hidden Plan');
     $subscription->update(['ends_at' => now()->subDay()]);
+    $company->update(['onboarding_completed_at' => now()->subMonths(2)]);
+    $owner->unsetRelation('company');
     $this->get(route('subscription.index'))->assertSuccessful()->assertSee('No active subscription');
 });
 
-test('subscription page handles empty plans and denies guests and staff', function () {
+test('subscription page handles empty plans and allows staff to see renewal information', function () {
     $this->get(route('subscription.index'))->assertRedirect(route('login'));
     $company = Company::factory()->create(['onboarding_completed_at' => now()]);
     $staff = User::factory()->for($company)->create(['user_type' => 'staff']);
-    $this->actingAs($staff)->getJson(route('subscription.index'))->assertForbidden();
+    $this->actingAs($staff)->get(route('subscription.index'))->assertSuccessful()->assertSee('Contact your company owner');
     $owner = User::factory()->for($company)->create(['user_type' => 'owner']);
     $this->actingAs($owner)->get(route('subscription.index'))->assertSuccessful()->assertSee('No plans available yet')->assertSee('No payments yet.');
 });

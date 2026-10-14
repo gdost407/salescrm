@@ -1,11 +1,13 @@
 <?php
 
 use App\Models\Company;
+use App\Models\Tax;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
-new #[Layout('components.layouts.app')] class extends Component {
+new #[Layout('components.layouts.onboarding')] class extends Component {
     public string $name = '';
     public string $email = '';
     public string $phone = '';
@@ -49,10 +51,24 @@ new #[Layout('components.layouts.app')] class extends Component {
 
         $company = Auth::user()->company;
         abort_unless($company instanceof Company, 403);
-        $company->update([
-            ...$validated,
-            'onboarding_completed_at' => now(),
-        ]);
+        DB::transaction(function () use ($company, $validated): void {
+            $company = Company::query()->lockForUpdate()->findOrFail($company->id);
+            abort_if($company->onboarding_completed_at !== null && ! $company->hasWorkspaceAccess(), 403, 'Your trial has expired. Please subscribe to continue.');
+            $company->update([
+                ...$validated,
+                'onboarding_completed_at' => $company->onboarding_completed_at ?? now(),
+            ]);
+
+            foreach ([0, 5, 18, 40] as $rate) {
+                Tax::firstOrCreate([
+                    'company_id' => $company->id,
+                    'name' => $rate.'% GST',
+                    'rate' => $rate,
+                ], ['is_active' => true]);
+            }
+        });
+
+        $company->refresh();
 
         $this->redirectIntended(default: route('dashboard', absolute: false), navigate: true);
     }

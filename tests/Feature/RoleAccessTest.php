@@ -96,7 +96,8 @@ test('different companies can initialize identical default roles and permissions
     foreach ([$this->company, $otherCompany] as $company) {
         $admin = Role::where('company_id', $company->id)->where('slug', 'admin')->firstOrFail();
         expect($admin->permissions()->where('permissions.company_id', '!=', $company->id)->exists())->toBeFalse()
-            ->and($admin->permissions()->count())->toBe(23);
+            ->and($admin->permissions()->pluck('slug')->sort()->values()->all())
+            ->toBe(collect(array_keys(array_merge(...array_values(Permission::MODULES))))->sort()->values()->all());
     }
 });
 

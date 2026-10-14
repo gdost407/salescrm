@@ -10,7 +10,7 @@ use Carbon\CarbonImmutable;
 /** @return array{0: Company, 1: array<string, string>} */
 function webhookAssignmentCompany(): array
 {
-    $company = Company::factory()->create();
+    $company = Company::factory()->create(['onboarding_completed_at' => now()]);
     $token = 'assignment-test-token';
     Integration::create([
         'company_id' => $company->id, 'name' => 'Webhook', 'type' => 'webhook',
@@ -115,7 +115,7 @@ test('webhook lead creation fails when token is invalid', function () {
 });
 
 test('webhook lead creation fails when token is expired/inactive', function () {
-    $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co']);
+    $company = Company::create(['name' => 'Test Co', 'slug' => 'test-co', 'onboarding_completed_at' => now()]);
     $token = 'crm_'.str_repeat('a', 64);
     Integration::create([
         'company_id' => $company->id,
@@ -135,7 +135,7 @@ test('webhook lead creation fails when token is expired/inactive', function () {
 });
 
 test('webhook lead creation creates lead successfully with valid token in bearer header', function () {
-    $company = Company::create(['name' => 'Acme Corp', 'slug' => 'acme-corp']);
+    $company = Company::create(['name' => 'Acme Corp', 'slug' => 'acme-corp', 'onboarding_completed_at' => now()]);
     $token = 'crm_valid_token_test_1234567890';
     $integration = Integration::create([
         'company_id' => $company->id,
@@ -189,7 +189,7 @@ test('webhook lead creation creates lead successfully with valid token in bearer
 });
 
 test('webhook lead creation accepts token via X-API-Token header', function () {
-    $company = Company::create(['name' => 'Beta Corp', 'slug' => 'beta-corp']);
+    $company = Company::create(['name' => 'Beta Corp', 'slug' => 'beta-corp', 'onboarding_completed_at' => now()]);
     $token = 'crm_header_token_test_123';
     Integration::create([
         'company_id' => $company->id,
@@ -213,7 +213,7 @@ test('webhook lead creation accepts token via X-API-Token header', function () {
 });
 
 test('webhook lead creation rejects a duplicate email or mobile in the same company', function () {
-    $company = Company::create(['name' => 'Duplicate Corp', 'slug' => 'duplicate-corp']);
+    $company = Company::create(['name' => 'Duplicate Corp', 'slug' => 'duplicate-corp', 'onboarding_completed_at' => now()]);
     $token = 'crm_duplicate_token_test_123';
     Integration::create([
         'company_id' => $company->id,
@@ -253,7 +253,7 @@ test('webhook lead creation rejects a duplicate email or mobile in the same comp
 });
 
 test('webhook lead creation returns validation errors for missing name', function () {
-    $company = Company::create(['name' => 'Gamma Corp', 'slug' => 'gamma-corp']);
+    $company = Company::create(['name' => 'Gamma Corp', 'slug' => 'gamma-corp', 'onboarding_completed_at' => now()]);
     $token = 'crm_val_token_test_123';
     $integration = Integration::create([
         'company_id' => $company->id,

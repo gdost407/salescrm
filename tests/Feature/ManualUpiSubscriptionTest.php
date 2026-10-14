@@ -57,6 +57,20 @@ test('upi proof activates subscription immediately with separate pending payment
     expect($payment->subscription->fresh()->status)->toBe('active');
 });
 
+test('an expired trial can purchase a subscription and resume module writes', function () {
+    $this->company->update(['onboarding_completed_at' => now()->subMonths(2)]);
+    $this->owner->unsetRelation('company');
+    $this->postJson(route('taxes.store'), [])->assertForbidden();
+
+    $this->post(($this->checkout)(), ['utr' => 'UPITRIAL123456', 'screenshot' => ($this->proof)()])
+        ->assertSessionHasNoErrors()->assertRedirect();
+
+    $this->post(route('taxes.store'), ['name' => 'Renewed GST', 'rate' => 5, 'is_active' => 1])
+        ->assertSessionHasNoErrors()->assertRedirect();
+    expect($this->company->fresh()->hasWorkspaceAccess())->toBeTrue();
+    $this->assertDatabaseHas('taxes', ['company_id' => $this->company->id, 'name' => 'Renewed GST']);
+});
+
 test('duplicate utr and repeat checkout cannot extend a subscription twice', function () {
     $url = ($this->checkout)();
     $this->post($url, ['utr' => 'UPI123456', 'screenshot' => ($this->proof)()])->assertSessionHasNoErrors();

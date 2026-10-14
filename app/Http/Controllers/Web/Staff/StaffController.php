@@ -177,7 +177,9 @@ class StaffController extends Controller
     {
         $companyId = $request->user()->company_id;
 
-        $this->ensureDefaultPermissions($companyId);
+        if (! $request->attributes->get('company_read_only')) {
+            $this->ensureDefaultPermissions($companyId);
+        }
 
         $roles = Role::query()
             ->where('company_id', $companyId)

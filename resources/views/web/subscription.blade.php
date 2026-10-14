@@ -3,6 +3,18 @@
 @section('content')
 <div class="container-xxl flex-grow-1 container-p-y">
     @include('web.partials.alerts')
+    @if (! $subscription && $trialEndsAt)
+        <div class="alert {{ $trialActive ? 'alert-info' : 'alert-warning' }}" role="alert">
+            @if ($trialActive)
+                Your one-month free trial is active until {{ $trialEndsAt->format('d M Y H:i') }}.
+            @else
+                Your free trial ended on {{ $trialEndsAt->format('d M Y H:i') }}. Only module lists are available until you subscribe.
+            @endif
+        </div>
+    @endif
+    @if (auth()->user()->user_type !== 'owner')
+        <div class="alert alert-info" role="alert">Contact your company owner to activate or renew a subscription.</div>
+    @endif
     <div class="card mb-6">
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
@@ -16,8 +28,8 @@
             <div class="row g-4 pt-3 border-top">
                 <div class="col-sm-6 col-lg-3">
                     <small class="text-body-secondary d-block mb-1">Current plan</small>
-                    <h5 class="mb-1">{{ $subscription?->plan?->name ?? 'No active subscription' }}</h5>
-                    <span class="badge {{ $subscription ? 'bg-label-success' : 'bg-label-secondary' }}">{{ $subscription ? 'Active' : 'Not subscribed' }}</span>
+                    <h5 class="mb-1">{{ $subscription?->plan?->name ?? ($trialActive ? 'Free trial' : 'No active subscription') }}</h5>
+                    <span class="badge {{ $subscription || $trialActive ? 'bg-label-success' : 'bg-label-secondary' }}">{{ $subscription || $trialActive ? 'Active' : 'Not subscribed' }}</span>
                 </div>
                 <div class="col-sm-6 col-lg-3">
                     <small class="text-body-secondary d-block mb-1">Staff capacity</small>
@@ -29,7 +41,7 @@
                 </div>
                 <div class="col-sm-6 col-lg-3">
                     <small class="text-body-secondary d-block mb-1">Current period ends</small>
-                    <h5 class="mb-0">{{ $subscription?->ends_at?->format('d M Y') ?? '—' }}</h5>
+                    <h5 class="mb-0">{{ ($subscription?->ends_at ?? ($trialActive ? $trialEndsAt : null))?->format('d M Y') ?? '—' }}</h5>
                 </div>
             </div>
         </div>
@@ -70,7 +82,9 @@
                                 </li>
                             @endforeach
                         </ul>
-                        <a href="{{ route('subscription.checkout', ['plan' => $plan, 'cycle' => 'monthly']) }}" data-checkout-url="{{ route('subscription.checkout', $plan) }}" class="btn btn-outline-primary w-100 mt-auto plan-checkout">Choose plan<i class="bx bx-right-arrow-alt ms-2" aria-hidden="true"></i></a>
+                        @if (auth()->user()->user_type === 'owner')
+                            <a href="{{ route('subscription.checkout', ['plan' => $plan, 'cycle' => 'monthly']) }}" data-checkout-url="{{ route('subscription.checkout', $plan) }}" class="btn btn-outline-primary w-100 mt-auto plan-checkout">Choose plan<i class="bx bx-right-arrow-alt ms-2" aria-hidden="true"></i></a>
+                        @endif
                     </div>
                 </div>
             </div>

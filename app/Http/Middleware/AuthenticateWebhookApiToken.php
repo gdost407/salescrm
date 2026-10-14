@@ -40,6 +40,13 @@ class AuthenticateWebhookApiToken
             ], 401);
         }
 
+        if (! $integration->company->hasWorkspaceAccess()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'An active free trial or subscription is required to create leads.',
+            ], 403);
+        }
+
         $request->attributes->set('integration', $integration);
         $request->attributes->set('company', $integration->company);
 

@@ -12,6 +12,14 @@
       <div class="layout-page">
         @include('partials.nav')
         <div class="content-wrapper">
+          @if (request()->attributes->get('company_read_only'))
+            <div class="container-xxl pt-3">
+              <div class="alert alert-warning" role="alert">
+                Your trial or subscription has expired. Only module lists are available.
+                <a href="{{ route('subscription.index') }}" class="alert-link">View subscription options</a>
+              </div>
+            </div>
+          @endif
           @if (session('access_error'))
             <div class="container-xxl pt-3">
               <div class="alert alert-danger" role="alert">{{ session('access_error') }}</div>

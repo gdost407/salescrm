@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 
 class Company extends Model
 {
@@ -27,6 +28,27 @@ class Company extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
+    }
+
+    public function trialEndsAt(): ?Carbon
+    {
+        return $this->onboarding_completed_at?->copy()->addMonthNoOverflow();
+    }
+
+    public function hasActiveTrial(): bool
+    {
+        return $this->onboarding_completed_at !== null
+            && $this->onboarding_completed_at->lte(now())
+            && $this->trialEndsAt()->gt(now());
+    }
+
+    public function hasWorkspaceAccess(): bool
+    {
+        return $this->hasActiveTrial() || $this->subscriptions()
+            ->where('status', 'active')
+            ->where(fn ($query) => $query->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+            ->where(fn ($query) => $query->whereNull('ends_at')->orWhere('ends_at', '>', now()))
+            ->exists();
     }
 
     public function leadSettings(): HasMany
