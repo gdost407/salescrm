@@ -13,22 +13,22 @@
             <div class="col-12 mb-4">@include('app.staff.attendance-punch')</div>
         @endif
         @forelse($cards as $card)
-        <div class="col-12 col-sm-6 col-xl-4 mb-4">
-            <div class="card h-100"><div class="card-body">
-                <h6 class="text-primary">{{ $card['label'] }}</h6>
-                <h2 class="mb-1">{{ number_format($card['count']) }}</h2>
-                <p class="text-muted">{{ $card['hint'] }}</p>
-                <a href="{{ route($card['route']) }}">View records <i class="bx bx-right-arrow-alt" aria-hidden="true"></i></a>
+        <div class="col-6 col-xl-2 mb-3">
+            <div class="card h-100"><div class="card-body py-2 px-3">
+                <h6 class="text-primary mb-1">{{ $card['label'] }}</h6>
+                <h4 class="mb-0">{{ number_format($card['count']) }}</h4>
+                <small class="text-muted d-block text-truncate" title="{{ $card['hint'] }}">{{ $card['hint'] }}</small>
+                <a class="small" href="{{ route($card['route']) }}">View records <i class="bx bx-right-arrow-alt" aria-hidden="true"></i></a>
             </div></div>
         </div>
         @empty
         <div class="col-12"><div class="alert alert-info">No dashboard metrics are available for your role. Contact your company administrator for access.</div></div>
         @endforelse
         @if($canViewLeads)
-        <div class="col-12 col-sm-6 col-xl-4 mb-4">
-            <div class="card h-100"><div class="card-body">
-                <h6 class="text-success">Conversion rate</h6><h2>{{ number_format($conversionRate, 1) }}%</h2>
-                <p class="text-muted mb-0">Converted leads as a share of all visible leads.</p>
+        <div class="col-6 col-xl-2 mb-3">
+            <div class="card h-100"><div class="card-body py-2 px-3">
+                <h6 class="text-success mb-1">Conversion rate</h6><h4 class="mb-0">{{ number_format($conversionRate, 1) }}%</h4>
+                <small class="text-muted">Converted / visible leads</small>
             </div></div>
         </div>
         @endif
@@ -43,6 +43,29 @@
             <table class="table">
                 <thead><tr><th>Lead name</th><th>Title</th><th>Assigned to</th><th>Status</th><th>Timing</th><th>Actions</th></tr></thead>
                 <tbody id="dashboard-scheduled-events"><tr><td colspan="6" class="text-center py-4 text-muted">Loading today's events...</td></tr></tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Scheduled follow-ups</h5>
+            <a href="{{ route('calendar') }}">View calendar</a>
+        </div>
+        <div class="table-responsive">
+            <table class="table">
+                <thead><tr><th>Lead</th><th>Follow-up note</th><th>Scheduled</th><th>Added by</th></tr></thead>
+                <tbody>
+                    @forelse($dashboardFollowups as $followup)
+                    <tr>
+                        <td><a href="{{ route('sales-lead-view', $followup->lead) }}">{{ $followup->lead->name }}</a></td>
+                        <td><strong>{{ $followup->subject ?: 'Follow-up' }}</strong>@if($followup->summary)<small class="d-block text-muted">{{ $followup->summary }}</small>@endif</td>
+                        <td class="text-nowrap">{{ $followup->scheduled_at->format('d M Y, h:i A') }}</td>
+                        <td>{{ $followup->user?->name ?? '—' }}</td>
+                    </tr>
+                    @empty
+                    <tr><td colspan="4" class="text-center py-4 text-muted">No pending follow-ups.</td></tr>
+                    @endforelse
+                </tbody>
             </table>
         </div>
     </div>

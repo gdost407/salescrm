@@ -40,7 +40,7 @@ class EnsureLeadAccess
             'destroyLead' => 'delete',
             'leadSettings', 'storeLeadSetting', 'updateLeadSetting', 'destroyLeadSetting' => 'settings',
             'kanban', 'kanbanLeads', 'allList', 'exportLeads', 'kanbanLeadDetails',
-            'leadView', 'leadActivityFragments', 'index', 'events' => 'view',
+            'searchLeads', 'leadView', 'leadActivityFragments', 'index', 'events' => 'view',
             default => null,
         };
 

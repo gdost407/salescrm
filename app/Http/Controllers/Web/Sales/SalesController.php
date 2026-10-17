@@ -90,6 +90,35 @@ class SalesController extends Controller
         ]);
     }
 
+    public function searchLeads(Request $request): JsonResponse
+    {
+        $search = trim($request->validate([
+            'search' => ['required', 'string', 'min:2', 'max:100'],
+        ])['search']);
+
+        $leads = $this->filteredLeads($request, [
+            'search' => $search,
+            'status' => '',
+            'stage' => '',
+            'source' => '',
+            'assigned_to' => '',
+            'date_from' => null,
+            'date_to' => null,
+        ])
+            ->limit(8)
+            ->get(['id', 'name', 'company_name', 'email', 'mobile', 'status', 'assigned_to']);
+
+        return response()->json([
+            'results' => $leads->map(fn (Lead $lead): array => [
+                'name' => $lead->name,
+                'company' => $lead->company_name,
+                'contact' => $lead->email ?: $lead->mobile,
+                'status' => $lead->status,
+                'url' => route('sales-lead-view', $lead),
+            ]),
+        ]);
+    }
+
     public function assignKanbanLead(Request $request, Lead $lead): JsonResponse
     {
         $this->ensureLeadBelongsToUserCompany($request, $lead);
@@ -535,7 +564,11 @@ class SalesController extends Controller
                     $query->where('name', 'like', "%{$search}%")
                         ->orWhere('email', 'like', "%{$search}%")
                         ->orWhere('mobile', 'like', "%{$search}%")
-                        ->orWhere('company_name', 'like', "%{$search}%");
+                        ->orWhere('alternate_mobile', 'like', "%{$search}%")
+                        ->orWhere('job_title', 'like', "%{$search}%")
+                        ->orWhere('company_name', 'like', "%{$search}%")
+                        ->orWhere('stage', 'like', "%{$search}%")
+                        ->orWhere('source', 'like', "%{$search}%");
                 });
             })
             ->when($filters['status'], fn ($query, $status) => $query->where('status', $status))

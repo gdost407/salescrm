@@ -2,6 +2,7 @@
 
 namespace App\Actions;
 
+use App\Jobs\SendNewLeadNotification;
 use App\Models\Client;
 use App\Models\Lead;
 use Illuminate\Support\Facades\DB;
@@ -12,7 +13,9 @@ class SaveLead
     /** @param array<string, mixed> $attributes */
     public function handle(array $attributes, ?Lead $lead = null): Lead
     {
-        return DB::transaction(function () use ($attributes, $lead): Lead {
+        [$lead, $created] = DB::transaction(function () use ($attributes, $lead): array {
+            $created = $lead === null;
+
             if ($lead) {
                 $lead = Lead::query()->where('company_id', $lead->company_id)->lockForUpdate()->findOrFail($lead->id);
                 $lead->fill($attributes);
@@ -22,7 +25,7 @@ class SaveLead
             }
 
             if ($lead->status !== 'Converted') {
-                return $lead;
+                return [$lead, $created];
             }
 
             $client = $lead->client_id
@@ -53,7 +56,13 @@ class SaveLead
 
             $lead->update(['client_id' => $client->id, 'converted_at' => $lead->converted_at ?? now()]);
 
-            return $lead;
+            return [$lead, $created];
         });
+
+        if ($created) {
+            SendNewLeadNotification::dispatch($lead->id)->afterCommit();
+        }
+
+        return $lead;
     }
 }
