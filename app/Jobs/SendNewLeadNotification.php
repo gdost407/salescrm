@@ -27,7 +27,16 @@ class SendNewLeadNotification implements ShouldQueue
             ->where('is_active', true)
             ->with('role.permissions')
             ->get()
-            ->filter(fn (User $user): bool => (int) $user->id === (int) $lead->assigned_to || $user->hasPermission('view_all_leads'));
+            ->filter(function (User $user) use ($lead): bool {
+                $isCompanyAdmin = $user->role?->slug === 'admin'
+                    && $user->role->status
+                    && (int) $user->role->company_id === (int) $lead->company_id;
+
+                return (int) $user->id === (int) $lead->assigned_to
+                    || $user->user_type === 'owner'
+                    || $isCompanyAdmin
+                    || $user->hasPermission('view_all_leads');
+            });
 
         foreach ($recipients as $recipient) {
             Notification::firstOrCreate(
@@ -38,8 +47,8 @@ class SendNewLeadNotification implements ShouldQueue
                 ],
                 [
                     'company_id' => $lead->company_id,
-                    'title' => 'New lead added',
-                    'message' => $lead->name.' was added to the sales pipeline.',
+                    'title' => 'New lead received',
+                    'message' => 'A new lead has been created: '.$lead->name.'.',
                     'data' => ['url' => route('sales-lead-view', $lead)],
                 ],
             );
