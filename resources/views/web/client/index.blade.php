@@ -4,6 +4,6 @@
     $resource = 'clients'; $permission = 'clients';
 @endphp
 <div class="container-xxl flex-grow-1 container-p-y">
-@include('web.partials.index', ['title' => 'Clients', 'singular' => 'Client', 'columns' => ['name' => 'Name', 'company_name' => 'Company', 'email' => 'Email', 'mobile' => 'Mobile']])
+@include('web.partials.index', ['title' => 'Clients', 'singular' => 'Client', 'columns' => ['sn' => 'SN', 'name' => 'Name', 'company_name' => 'Company', 'email' => 'Email', 'mobile' => 'Mobile']])
 </div>
 @endsection

@@ -16,7 +16,7 @@ class TxnQuotation extends Model
     use HasFactory;
 
     protected $fillable = [
-        'company_id', 'client_id', 'quotation_no', 'quotation_date', 'valid_until', 'subtotal', 'discount_amount', 'tax_amount', 'total_amount', 'status', 'notes', 'terms', 'created_by',
+        'company_id', 'client_id', 'quotation_no', 'title', 'quotation_date', 'valid_until', 'subtotal', 'discount_amount', 'tax_amount', 'total_amount', 'status', 'notes', 'terms', 'created_by',
     ];
 
     protected $attributes = [

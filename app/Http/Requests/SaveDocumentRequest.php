@@ -40,6 +40,7 @@ class SaveDocumentRequest extends FormRequest
         foreach (SalesDocumentChoices::FIELDS[$type] as $field) {
             $rules[$field] = match ($field) {
                 'quotation_id', 'job_id' => ['nullable', 'integer', Rule::exists($field === 'job_id' ? 'txn_jobs' : 'txn_quotations', 'id')->where('company_id', $companyId)->where('client_id', $this->input('client_id'))],
+                'title' => ['nullable', 'string', 'max:255'],
                 'terms' => ['nullable', 'string', 'max:10000'],
                 default => ['nullable', 'date_format:Y-m-d', 'after_or_equal:'.$type.'_date'],
             };

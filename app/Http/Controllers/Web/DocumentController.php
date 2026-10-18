@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
-use Symfony\Component\HttpFoundation\StreamedResponse;
+use Symfony\Component\HttpFoundation\Response;
 use Throwable;
 
 abstract class DocumentController extends Controller
@@ -90,11 +90,21 @@ abstract class DocumentController extends Controller
         return redirect()->route($request->user()->hasPermission('view_'.$this->type.'s') ? $this->type.'s.index' : 'dashboard')->with('success', ucfirst($this->type).' deleted.');
     }
 
-    public function attachment(Request $request): StreamedResponse
+    public function attachment(Request $request): Response
     {
         $record = $this->record($request);
         $attachment = $record->attachments()->where('company_id', $request->user()->company_id)->findOrFail($request->route('attachment'));
         abort_unless(Storage::disk('local')->exists($attachment->file_path), 404);
+
+        if ($request->boolean('preview')) {
+            abort_unless(in_array($attachment->mime_type, ['image/jpeg', 'image/png', 'image/webp'], true), 404);
+
+            return response()->file(Storage::disk('local')->path($attachment->file_path), [
+                'Content-Type' => $attachment->mime_type,
+                'X-Content-Type-Options' => 'nosniff',
+                'Cache-Control' => 'private, no-store',
+            ]);
+        }
 
         return Storage::disk('local')->download($attachment->file_path, $attachment->file_name, ['X-Content-Type-Options' => 'nosniff', 'Cache-Control' => 'private, no-store']);
     }
@@ -119,7 +129,27 @@ abstract class DocumentController extends Controller
     private function form(Request $request, Model $record, string $page): View
     {
         $companyId = $request->user()->company_id;
-        $clients = Client::where('company_id', $companyId)->orderBy('name')->get(['id', 'name']);
+        if ($this->type === 'quotation' && $page === 'create') {
+            $clients = Client::query()
+                ->where('company_id', $companyId)
+                ->orderByDesc('created_at')
+                ->orderByDesc('id')
+                ->limit(10)
+                ->get(['id', 'name', 'company_name', 'email', 'mobile', 'billing_address', 'shipping_address', 'country', 'state', 'city', 'zip_code']);
+
+            $selectedClientId = $request->old('client_id');
+            if ($selectedClientId && ! $clients->contains('id', (int) $selectedClientId)) {
+                $selectedClient = Client::query()
+                    ->where('company_id', $companyId)
+                    ->whereKey($selectedClientId)
+                    ->first(['id', 'name', 'company_name', 'email', 'mobile', 'billing_address', 'shipping_address', 'country', 'state', 'city', 'zip_code']);
+                if ($selectedClient) {
+                    $clients->prepend($selectedClient);
+                }
+            }
+        } else {
+            $clients = Client::where('company_id', $companyId)->orderBy('name')->get(['id', 'name']);
+        }
         $catalog = Item::forCompany($companyId)->with('tax')->where('is_active', true)->orderBy('name')->get()
             ->map(fn (Item $item): array => ['id' => $item->id, 'type' => $item->type, 'name' => $item->name, 'hsn' => $item->hsn_sac, 'rate' => $item->rate, 'gst_rate' => $item->tax?->rate ?? '0', 'tax_type' => $item->tax_type]);
         $snapshots = $record->exists ? $record->items->map(fn ($item): array => [
@@ -131,7 +161,25 @@ abstract class DocumentController extends Controller
         foreach (['quotation_id' => 'quotation', 'job_id' => 'job'] as $field => $type) {
             if (in_array($field, SalesDocumentChoices::FIELDS[$this->type], true)) {
                 $model = SalesDocumentChoices::MODELS[$type];
-                $linkedDocuments[$field] = $model::forCompany($companyId)->orderByDesc('id')->get(['id', $type.'_no']);
+                $query = $model::forCompany($companyId)->orderByDesc('id');
+                if ($field === 'quotation_id' && $this->type === 'job' && $page === 'create') {
+                    $today = today();
+                    $legacyExpiryDate = today()->subDays(2);
+                    $query->where(function ($quotationQuery) use ($today, $legacyExpiryDate): void {
+                        $quotationQuery->where('status', 'accepted')
+                            ->orWhere(function ($pendingQuery) use ($today, $legacyExpiryDate): void {
+                                $pendingQuery->whereIn('status', ['draft', 'sent'])
+                                    ->where(function ($validityQuery) use ($today, $legacyExpiryDate): void {
+                                        $validityQuery->whereDate('valid_until', '>=', $today)
+                                            ->orWhere(function ($legacyQuery) use ($legacyExpiryDate): void {
+                                                $legacyQuery->whereNull('valid_until')
+                                                    ->whereDate('quotation_date', '>=', $legacyExpiryDate);
+                                            });
+                                    });
+                            });
+                    });
+                }
+                $linkedDocuments[$field] = $query->get(['id', $type.'_no']);
             }
         }
         $statuses = SalesDocumentChoices::STATUSES[$this->type];

@@ -14,7 +14,7 @@ class ClientController extends Controller
 {
     public function index(Request $request): View
     {
-        $records = Client::where('company_id', $request->user()->company_id)->orderBy('name')->paginate(20);
+        $records = Client::where('company_id', $request->user()->company_id)->orderByDesc('id')->paginate(20);
 
         return view('web.client.index', compact('records'));
     }

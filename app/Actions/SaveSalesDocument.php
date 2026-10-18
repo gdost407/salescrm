@@ -8,6 +8,7 @@ use App\Models\Item;
 use App\Models\User;
 use Brick\Math\BigDecimal;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -15,7 +16,7 @@ class SaveSalesDocument
 {
     public function __construct(private CalculateQuotationLine $calculateLine) {}
 
-    /** @param array{client_id: int|string, items: array<int, array{catalog_item_id?: int|string|null, quotation_item_id?: int|string|null, quantity: int|float|string}>, quotation_date?: string, job_date?: string, invoice_date?: string, status?: string, notes?: ?string, terms?: ?string, valid_until?: ?string, start_date?: ?string, completion_date?: ?string, due_date?: ?string, quotation_id?: int|string|null, job_id?: int|string|null} $data */
+    /** @param array{client_id: int|string, items: array<int, array{catalog_item_id?: int|string|null, quotation_item_id?: int|string|null, quantity: int|float|string}>, quotation_date?: string, job_date?: string, invoice_date?: string, status?: string, title?: ?string, notes?: ?string, terms?: ?string, valid_until?: ?string, start_date?: ?string, completion_date?: ?string, due_date?: ?string, quotation_id?: int|string|null, job_id?: int|string|null} $data */
     public function handle(User $user, array $data, string $type, ?Model $document = null): Model
     {
         $model = SalesDocumentChoices::MODELS[$type];
@@ -34,6 +35,11 @@ class SaveSalesDocument
                 $parent = $parentModel::forCompany($user->company_id)->lockForUpdate()->find($data[$field]);
                 if (! $parent || (int) $parent->client_id !== (int) $client->id) {
                     throw ValidationException::withMessages([$field => 'Select a document belonging to this client.']);
+                }
+                $validUntil = $parent?->valid_until ?? $parent?->quotation_date?->copy()->addDays(2);
+                $isExistingJobQuotation = $type === 'job' && $document && (int) $document->quotation_id === (int) $parent->id;
+                if ($type === 'job' && $parentType === 'quotation' && ! $isExistingJobQuotation && (! in_array($parent->status, ['draft', 'sent', 'accepted'], true) || (in_array($parent->status, ['draft', 'sent'], true) && $validUntil?->isBefore(today())))) {
+                    throw ValidationException::withMessages([$field => 'Select a quotation that has not expired or been cancelled.']);
                 }
                 if ($parentType === 'job' && $parent->quotation_id && ! empty($data['quotation_id']) && (int) $parent->quotation_id !== (int) $data['quotation_id']) {
                     throw ValidationException::withMessages([$field => 'The job belongs to a different quotation.']);
@@ -93,6 +99,9 @@ class SaveSalesDocument
 
             foreach (SalesDocumentChoices::FIELDS[$type] as $field) {
                 $attributes[$field] = $data[$field] ?? null;
+            }
+            if ($type === 'quotation' && ! $attributes['valid_until']) {
+                $attributes['valid_until'] = Carbon::parse($data['quotation_date'])->addDays(2)->toDateString();
             }
             if ($document && (int) $document->client_id !== (int) $client->id) {
                 $relations = ['payments', 'ledgerEntries'];

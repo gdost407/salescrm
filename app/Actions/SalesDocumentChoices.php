@@ -12,7 +12,7 @@ class SalesDocumentChoices
     public const MODELS = ['quotation' => TxnQuotation::class, 'job' => TxnJob::class, 'invoice' => TxnInvoice::class];
 
     public const FIELDS = [
-        'quotation' => ['valid_until', 'terms'],
+        'quotation' => ['title', 'valid_until', 'terms'],
         'job' => ['quotation_id', 'start_date', 'completion_date'],
         'invoice' => ['quotation_id', 'job_id', 'due_date', 'terms'],
     ];

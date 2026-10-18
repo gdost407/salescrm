@@ -8,8 +8,9 @@
 <div class="card"><div class="table-responsive">
     <table class="table"><thead><tr>@foreach($columns as $label)<th>{{ $label }}</th>@endforeach<th>Actions</th></tr></thead>
     <tbody>@forelse($records as $record)<tr>
+        @php($serialNumber = $records->firstItem() + $loop->index)
         @foreach($columns as $field => $label)
-        @php($cell = data_get($record, $field))
+        @php($cell = $field === 'sn' ? $serialNumber : data_get($record, $field))
         <td>{{ $cell instanceof \DateTimeInterface ? $cell->format('d M Y') : $cell }}</td>
         @endforeach
         <td>@include('web.partials.actions')</td>

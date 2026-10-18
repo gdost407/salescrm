@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::job(new PruneWebhookLogs)->hourly();
+Schedule::command('app:cancel-expired-quotations')->dailyAt('00:05')->withoutOverlapping();
