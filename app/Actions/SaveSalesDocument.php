@@ -134,20 +134,118 @@ class SaveSalesDocument
             }
 
             if ($document) {
+                if ($type === 'quotation') {
+                    $changes = $this->quotationChanges($document, $attributes, $oldItems, $lines);
+                    if ($changes !== []) {
+                        $document->appendActivity($this->activityEntry(
+                            $user,
+                            $attributes['status'] !== $document->status ? 'status_changed' : 'updated',
+                            $changes,
+                            $attributes['status'] !== $document->status ? 'Quotation status changed' : 'Quotation updated',
+                        ));
+                        $attributes['activity_log'] = $document->activity_log;
+                    }
+                }
                 $document->update($attributes);
                 $document->items()->delete();
             } else {
+                $creationActivity = null;
                 Company::query()->lockForUpdate()->findOrFail($user->company_id);
                 $sequence = ((int) $model::forCompany($user->company_id)->max('id')) + 1;
                 do {
                     $number = ['quotation' => 'QT-', 'job' => 'JB-', 'invoice' => 'INV-'][$type].str_pad((string) $sequence++, 6, '0', STR_PAD_LEFT);
                 } while ($model::forCompany($user->company_id)->where($type.'_no', $number)->exists());
+                if ($type === 'quotation') {
+                    $creationActivity = $this->activityEntry($user, 'created', [
+                        'status' => ['from' => null, 'to' => $attributes['status']],
+                    ], 'Quotation created');
+                }
                 $document = $model::create($attributes + ['company_id' => $user->company_id, 'created_by' => $user->id, $type.'_no' => $number]);
+                if ($creationActivity !== null) {
+                    $document->activity_log = [$creationActivity];
+                    $document->save();
+                }
             }
 
             $document->items()->createMany($lines);
 
             return $document;
         });
+    }
+
+    /** @param array<string, mixed> $attributes @param \Illuminate\Support\Collection<int, Model> $oldItems @param array<int, array<string, mixed>> $lines @return array<string, array{label: string, from: mixed, to: mixed}> */
+    private function quotationChanges(Model $document, array $attributes, $oldItems, array $lines): array
+    {
+        $labels = [
+            'client_id' => 'Client',
+            'quotation_date' => 'Date',
+            'valid_until' => 'Valid until',
+            'status' => 'Status',
+            'title' => 'Title',
+            'notes' => 'Notes',
+            'terms' => 'Terms',
+            'subtotal' => 'Subtotal',
+            'tax_amount' => 'Tax',
+            'total_amount' => 'Total',
+        ];
+        $changes = [];
+
+        foreach ($labels as $field => $label) {
+            $before = $document->getAttribute($field);
+            $after = $attributes[$field] ?? null;
+            $beforeValue = $before instanceof \DateTimeInterface ? $before->format('Y-m-d') : (string) ($before ?? '');
+            $afterValue = $after instanceof \DateTimeInterface ? $after->format('Y-m-d') : (string) ($after ?? '');
+
+            if ($beforeValue === $afterValue) {
+                continue;
+            }
+
+            if (in_array($field, ['notes', 'terms'], true)) {
+                $beforeValue = $beforeValue === '' ? 'Empty' : 'Updated';
+                $afterValue = $afterValue === '' ? 'Empty' : 'Updated';
+            }
+            if ($field === 'client_id') {
+                $beforeValue = $beforeValue === '' ? 'None' : 'Client #'.$beforeValue;
+                $afterValue = $afterValue === '' ? 'None' : 'Client #'.$afterValue;
+            }
+            $changes[$field] = ['label' => $label, 'from' => $beforeValue, 'to' => $afterValue];
+        }
+
+        $itemFields = [
+            'item_name', 'description', 'hsn_sac', 'sku', 'rate', 'qty', 'tax_rate', 'tax_type', 'taxable_amount', 'tax_amount', 'total_amount',
+        ];
+        $oldLineValues = $oldItems->map(fn (Model $item): array => array_map(
+            fn (string $field): mixed => $item->getAttribute($field),
+            $itemFields,
+        ))->values()->all();
+        $newLineValues = array_map(fn (array $line): array => array_map(
+            fn (string $field): mixed => $line[$field] ?? null,
+            $itemFields,
+        ), $lines);
+
+        if ($oldLineValues !== $newLineValues) {
+            $oldTotal = (string) $document->total_amount;
+            $newTotal = (string) ($attributes['total_amount'] ?? '0.00');
+            $changes['items'] = [
+                'label' => 'Line items',
+                'from' => count($oldLineValues).' item(s), INR '.number_format((float) $oldTotal, 2),
+                'to' => count($newLineValues).' item(s), INR '.number_format((float) $newTotal, 2),
+            ];
+        }
+
+        return $changes;
+    }
+
+    /** @param array<string, array{label?: string, from: mixed, to: mixed}> $changes @return array<string, mixed> */
+    private function activityEntry(User $user, string $action, array $changes, string $summary): array
+    {
+        return [
+            'action' => $action,
+            'user_id' => $user->id,
+            'user_name' => $user->name,
+            'occurred_at' => now()->toIso8601String(),
+            'summary' => $summary,
+            'changes' => $changes,
+        ];
     }
 }

@@ -40,7 +40,7 @@
                     ? number_format($attachment->file_size / 1048576, 1).' MB'
                     : number_format($attachment->file_size / 1024, 0).' KB';
             @endphp
-            <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+            <div class="col-12 col-sm-12">
                 <article class="card h-100">
                     @if($isImage)
                         <a class="document-attachment-preview" href="{{ $previewUrl }}" target="_blank" rel="noopener" aria-label="Preview {{ $attachment->file_name }}">

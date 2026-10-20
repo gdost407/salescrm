@@ -123,20 +123,23 @@
     }
     .sales-document__items {
         border-color: #e5e7eb;
-        font-size: .82rem;
+        font-size: 10px;
         margin-bottom: 0;
     }
     .sales-document__items thead th {
         background: var(--document-accent-soft);
         border-bottom: 2px solid var(--document-accent);
         color: #344054;
-        font-size: .7rem;
+        font-size: inherit;
         font-weight: 700;
         letter-spacing: .04em;
         text-transform: uppercase;
         vertical-align: middle;
         -webkit-print-color-adjust: exact;
         print-color-adjust: exact;
+    }
+    .sales-document__items small {
+        font-size: inherit;
     }
     .sales-document__items td,
     .sales-document__items th {
@@ -174,6 +177,10 @@
         display: inline-block;
         text-align: center;
     }
+    .sales-document--quotation .sales-document__header *,
+    .sales-document--quotation .sales-document__party * {
+        font-size: 11px !important;
+    }
     @media (max-width: 575.98px) {
         .sales-document__meta-grid {
             grid-template-columns: 1fr 1fr;
@@ -193,6 +200,30 @@
             box-shadow: none;
             overflow: visible;
         }
+        .sales-document__header > .row > .col-md-7 {
+            flex: 0 0 58.333333%;
+            max-width: 58.333333%;
+        }
+        .sales-document__header > .row > .col-md-5 {
+            flex: 0 0 41.666667%;
+            max-width: 41.666667%;
+        }
+        .sales-document__header-right {
+            padding-right: 48px;
+            text-align: right !important;
+        }
+        .sales-document__parties > .col-md-6 {
+            flex: 0 0 50%;
+            max-width: 50%;
+        }
+        .sales-document__summary > .col-md-7 {
+            flex: 0 0 58.333333%;
+            max-width: 58.333333%;
+        }
+        .sales-document__summary > .col-md-5 {
+            flex: 0 0 41.666667%;
+            max-width: 41.666667%;
+        }
         .sales-document__header,
         .sales-document__party,
         .sales-document__items thead,
@@ -202,11 +233,10 @@
         }
         .sales-document__items {
             min-width: 0;
-            font-size: 9px;
         }
         .sales-document__items td,
         .sales-document__items th {
-            padding: .45rem .35rem;
+            padding: .25rem .3rem;
         }
         .sales-document__party,
         .sales-document__totals,
@@ -300,18 +330,18 @@
 
         <section class="table-responsive mb-4" aria-label="Document items">
             <table class="table table-bordered sales-document__items">
-                <thead><tr><th>#</th><th>Item / description</th><th>Qty</th><th>Rate (INR)</th><th>GST %</th><th>Taxable (INR)</th><th>GST (INR)</th><th>Total (INR)</th></tr></thead>
+                <thead><tr><th>#</th><th>Item / description</th><th>Qty</th><th>Rate (₹)</th><th>GST %</th><th>Taxable (₹)</th><th>GST (₹)</th><th>Total (₹)</th></tr></thead>
                 <tbody>
                 @foreach($record->items as $item)
                     <tr>
                         <td>{{ $loop->iteration }}</td>
                         <td><strong>{{ $item->item_name }}</strong>@if($item->description)<div class="text-body-secondary">{{ $item->description }}</div>@endif @if($item->hsn_sac)<small>HSN / SAC: {{ $item->hsn_sac }}</small>@endif</td>
                         <td class="text-end">{{ $item->qty }}</td>
-                        <td class="text-end">{{ $item->rate }}<small class="d-block text-body-secondary">GST {{ $item->tax_type }}</small></td>
+                        <td class="text-end">₹ {{ $item->rate }}</td>
                         <td class="text-end">{{ $item->tax_rate }}</td>
-                        <td class="text-end">{{ $item->taxable_amount }}</td>
-                        <td class="text-end">{{ $item->tax_amount }}</td>
-                        <td class="text-end fw-semibold">{{ $item->total_amount }}</td>
+                        <td class="text-end">₹ {{ $item->taxable_amount }}</td>
+                        <td class="text-end">₹ {{ $item->tax_amount }}</td>
+                        <td class="text-end fw-semibold">₹ {{ $item->total_amount }}</td>
                     </tr>
                 @endforeach
                 </tbody>

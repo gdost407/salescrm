@@ -36,7 +36,16 @@ class TxnQuotation extends Model
             'total_amount' => 'decimal:2',
             'quotation_date' => 'date',
             'valid_until' => 'date',
+            'activity_log' => 'array',
         ];
+    }
+
+    /** @param array<string, mixed> $activity */
+    public function appendActivity(array $activity): void
+    {
+        $activities = $this->activity_log ?? [];
+        $activities[] = $activity;
+        $this->activity_log = $activities;
     }
 
     public function scopeForCompany(Builder $query, int $companyId): Builder

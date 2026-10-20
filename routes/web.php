@@ -119,6 +119,7 @@ Route::middleware(['auth', EnsureCompanyOnboardingComplete::class, 'verified'])-
 
     Route::get('quotations/{document}/print', [QuotationController::class, 'print'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':view_quotations')->name('quotations.print');
     Route::get('quotations/{document}/attachments/{attachment}', [QuotationController::class, 'attachment'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':view_quotations')->name('quotations.attachment');
+    Route::get('quotations/export', [QuotationController::class, 'export'])->middleware(EnsurePermission::class.':view_quotations')->name('quotations.export');
     Route::get('quotations', [QuotationController::class, 'index'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':view_quotations')->name('quotations.index');
     Route::get('quotations/clients/search', [QuotationController::class, 'searchClients'])->middleware(EnsurePermission::class.':create_quotations')->name('quotations.clients.search');
     Route::get('quotations/create', [QuotationController::class, 'create'])->defaults('document_type', 'quotation')->middleware(EnsurePermission::class.':create_quotations')->name('quotations.create');

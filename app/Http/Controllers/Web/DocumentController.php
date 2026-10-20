@@ -118,7 +118,7 @@ abstract class DocumentController extends Controller
 
     private function details(Request $request, string $page): View
     {
-        $record = $this->record($request)->load('company', 'client', 'items', 'attachments');
+        $record = $this->record($request)->load('company', 'client', 'items', 'attachments', 'creator');
         $payments = $request->user()->hasPermission('view_payments')
             ? $record->payments()->where('company_id', $request->user()->company_id)->orderBy('payment_date')->get()
             : collect();
